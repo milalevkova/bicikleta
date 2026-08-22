@@ -1,2 +1,1 @@
-sfghjnm volim te
-ja tebe isto
+sfghjnm volim te ja tebe isto ja tebe vise!!!!!!!!!!.
