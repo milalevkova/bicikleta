@@ -1,4 +1,4 @@
-# 🚲 Bičikleta
+# 🚲 BIČIKLETA
 
 ## O projektu
 
