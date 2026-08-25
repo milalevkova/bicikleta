@@ -2,15 +2,19 @@
 defineProps({
   bike: {
     type: Object,
-    required: true
-  }
-})
+    required: true,
+  },
+});
 </script>
 
 <template>
   <article class="card bike-card">
     <div class="image">
-      <img v-if="bike.slika && bike.slika !== 'url'" :src="bike.slika" :alt="bike.naziv">
+      <img
+        v-if="bike.slika && bike.slika !== 'url'"
+        :src="bike.slika"
+        :alt="bike.naziv"
+      />
       <span v-else>🚲</span>
     </div>
 
@@ -20,8 +24,12 @@ defineProps({
         <span class="status">{{ bike.stanje }}</span>
       </div>
 
-      <p class="muted">{{ bike.vrsta }} · {{ bike.lokacija || 'Lokacija nije unesena' }}</p>
-      <p><strong>{{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat</strong></p>
+      <p class="muted">
+        {{ bike.vrsta }} · {{ bike.lokacija || "Lokacija nije unesena" }}
+      </p>
+      <p>
+        <strong>{{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat</strong>
+      </p>
 
       <router-link class="btn btn-primary" :to="`/bicikli/${bike.id}`">
         Detalji
@@ -62,5 +70,7 @@ defineProps({
   align-items: flex-start;
 }
 
-h3 { margin: 0; }
+h3 {
+  margin: 0;
+}
 </style>

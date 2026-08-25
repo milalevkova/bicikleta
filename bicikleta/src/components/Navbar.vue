@@ -1,27 +1,27 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { auth } from '../firebase/firebase'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted } from "vue";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "../firebase/firebase";
+import { useRouter } from "vue-router";
 
-const user = ref(null)
-const router = useRouter()
-let stopAuth
+const user = ref(null);
+const router = useRouter();
+let stopAuth;
 
 onMounted(() => {
-  stopAuth = onAuthStateChanged(auth, currentUser => {
-    user.value = currentUser
-  })
-})
+  stopAuth = onAuthStateChanged(auth, (currentUser) => {
+    user.value = currentUser;
+  });
+});
 
 onUnmounted(() => {
-  if (stopAuth) stopAuth()
-})
+  if (stopAuth) stopAuth();
+});
 
 const odjava = async () => {
-  await signOut(auth)
-  router.push('/')
-}
+  await signOut(auth);
+  router.push("/");
+};
 </script>
 
 <template>
@@ -87,7 +87,7 @@ button {
   cursor: pointer;
 }
 
-@media(max-width: 800px) {
+@media (max-width: 800px) {
   .nav {
     align-items: flex-start;
     flex-direction: column;

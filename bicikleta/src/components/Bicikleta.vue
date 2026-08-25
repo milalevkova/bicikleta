@@ -14,7 +14,14 @@
   align-items: center;
   gap: 12px;
 }
-.icon { font-size: 38px; }
-strong { display: block; font-size: 24px; }
-small { color: #6c766f; }
+.icon {
+  font-size: 38px;
+}
+strong {
+  display: block;
+  font-size: 24px;
+}
+small {
+  color: #6c766f;
+}
 </style>
