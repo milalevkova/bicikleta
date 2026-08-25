@@ -1,16 +1,27 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase/firebase";
 import { useRouter } from "vue-router";
 
 const user = ref(null);
+const isAdmin = ref(false);
 const router = useRouter();
 let stopAuth;
 
 onMounted(() => {
-  stopAuth = onAuthStateChanged(auth, (currentUser) => {
+  stopAuth = onAuthStateChanged(auth, async (currentUser) => {
     user.value = currentUser;
+    isAdmin.value = false;
+
+    if (currentUser) {
+      const snap = await getDoc(doc(db, "korisnici", currentUser.uid));
+
+      if (snap.exists()) {
+        isAdmin.value = snap.data().uloga === "admin";
+      }
+    }
   });
 });
 
@@ -33,10 +44,13 @@ const odjava = async () => {
       <router-link to="/bicikli">Bicikli</router-link>
 
       <template v-if="user">
-        <router-link to="/rezervacije">Moje rezervacije</router-link>
-        <router-link to="/najmovi">Moji najmovi</router-link>
+        <template v-if="!isAdmin">
+          <router-link to="/rezervacije">Moje rezervacije</router-link>
+          <router-link to="/najmovi">Moji najmovi</router-link>
+        </template>
+
         <router-link to="/profil">Profil</router-link>
-        <router-link to="/admin">Admin</router-link>
+        <router-link v-if="isAdmin" to="/admin">Admin</router-link>
         <button @click="odjava">Odjava</button>
       </template>
 

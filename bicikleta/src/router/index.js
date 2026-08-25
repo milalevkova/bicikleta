@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase/firebase";
 
 import Home from "../views/Home.vue";
 import Login from "../views/Login.vue";
@@ -22,12 +23,28 @@ const routes = [
   {
     path: "/rezervacije",
     component: Reservations,
+    meta: { requiresAuth: true, userOnly: true },
+  },
+  {
+    path: "/najmovi",
+    component: Rentals,
+    meta: { requiresAuth: true, userOnly: true },
+  },
+  {
+    path: "/najam/:id",
+    component: ActiveRental,
+    meta: { requiresAuth: true, userOnly: true },
+  },
+  {
+    path: "/profil",
+    component: Profile,
     meta: { requiresAuth: true },
   },
-  { path: "/najmovi", component: Rentals, meta: { requiresAuth: true } },
-  { path: "/najam/:id", component: ActiveRental, meta: { requiresAuth: true } },
-  { path: "/profil", component: Profile, meta: { requiresAuth: true } },
-  { path: "/admin", component: Admin, meta: { requiresAuth: true } },
+  {
+    path: "/admin",
+    component: Admin,
+    meta: { requiresAuth: true, adminOnly: true },
+  },
 ];
 
 const router = createRouter({
@@ -37,18 +54,53 @@ const router = createRouter({
 
 const getCurrentUser = () => {
   return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
+    const stop = onAuthStateChanged(auth, (user) => {
+      stop();
       resolve(user);
     });
   });
 };
 
+const getKorisnik = async (user) => {
+  if (!user) return null;
+
+  const snap = await getDoc(doc(db, "korisnici", user.uid));
+  if (!snap.exists()) return null;
+
+  return snap.data();
+};
+
 router.beforeEach(async (to) => {
   const user = await getCurrentUser();
 
-  if (to.meta.requiresAuth && !user) return "/prijava";
-  if (to.meta.guestOnly && user) return "/bicikli";
+  if (to.meta.requiresAuth && !user) {
+    return "/prijava";
+  }
+
+  if (!user) {
+    return true;
+  }
+
+  const korisnik = await getKorisnik(user);
+
+  if (korisnik?.status === "blokiran") {
+    await signOut(auth);
+    return "/prijava";
+  }
+
+  if (to.meta.guestOnly) {
+    return korisnik?.uloga === "admin" ? "/admin" : "/bicikli";
+  }
+
+  if (to.meta.adminOnly && korisnik?.uloga !== "admin") {
+    return "/bicikli";
+  }
+
+  if (to.meta.userOnly && korisnik?.uloga === "admin") {
+    return "/admin";
+  }
+
+  return true;
 });
 
 export default router;

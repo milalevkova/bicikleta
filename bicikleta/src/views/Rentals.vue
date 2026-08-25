@@ -11,28 +11,51 @@ import {
 import { db, auth } from "../firebase/firebase";
 
 const najmovi = ref([]);
+const loading = ref(true);
+const greska = ref("");
 
 const ucitaj = async () => {
-  if (!auth.currentUser) return;
+  loading.value = true;
+  greska.value = "";
 
-  const q = query(
-    collection(db, "najmovi"),
-    where("korisnikId", "==", auth.currentUser.uid),
-  );
-
-  const snap = await getDocs(q);
-  const list = [];
-
-  for (const d of snap.docs) {
-    const data = d.data();
-    let naziv = data.biciklId;
-    const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));
-    if (bikeSnap.exists()) naziv = bikeSnap.data().naziv;
-
-    list.push({ id: d.id, nazivBicikla: naziv, ...data });
+  if (!auth.currentUser) {
+    loading.value = false;
+    return;
   }
 
-  najmovi.value = list;
+  try {
+    const q = query(
+      collection(db, "najmovi"),
+      where("korisnikId", "==", auth.currentUser.uid),
+    );
+
+    const snap = await getDocs(q);
+    const list = [];
+
+    for (const d of snap.docs) {
+      const data = d.data();
+      let naziv = "Bicikl";
+
+      const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));
+      if (bikeSnap.exists()) {
+        naziv = bikeSnap.data().naziv;
+      }
+
+      list.push({ id: d.id, nazivBicikla: naziv, ...data });
+    }
+
+    list.sort((a, b) => {
+      const aVrijeme = a.vrijemePocetka?.toMillis?.() || 0;
+      const bVrijeme = b.vrijemePocetka?.toMillis?.() || 0;
+      return bVrijeme - aVrijeme;
+    });
+
+    najmovi.value = list;
+  } catch {
+    greska.value = "Nije moguće učitati najmove.";
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(ucitaj);
@@ -42,7 +65,10 @@ onMounted(ucitaj);
   <section>
     <h1>Moji najmovi</h1>
 
-    <div class="grid">
+    <p v-if="loading">Učitavanje...</p>
+    <p v-if="greska" class="notice error">{{ greska }}</p>
+
+    <div v-if="!loading" class="grid">
       <article v-for="n in najmovi" :key="n.id" class="card">
         <h3>{{ n.nazivBicikla }}</h3>
         <p>
@@ -57,11 +83,15 @@ onMounted(ucitaj);
           <p>Trajanje: {{ n.trajanjeMinuta }} min</p>
           <p>
             Ukupna cijena:
-            <strong>{{ Number(n.ukupnaCijena).toFixed(2) }} €</strong>
+            <strong>{{ Number(n.ukupnaCijena || 0).toFixed(2) }} €</strong>
           </p>
         </template>
 
-        <router-link v-else class="btn btn-primary" :to="`/najam/${n.id}`">
+        <router-link
+          v-if="n.status === 'aktivan'"
+          class="btn btn-primary"
+          :to="`/najam/${n.id}`"
+        >
           Otvori aktivni najam
         </router-link>
       </article>

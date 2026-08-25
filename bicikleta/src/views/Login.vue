@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
 import { useRouter } from "vue-router";
@@ -9,9 +9,17 @@ const router = useRouter();
 const email = ref("");
 const lozinka = ref("");
 const greska = ref("");
+const loading = ref(false);
 
 const prijavi = async () => {
   greska.value = "";
+
+  if (!email.value || !lozinka.value) {
+    greska.value = "Upiši e-mail i lozinku.";
+    return;
+  }
+
+  loading.value = true;
 
   try {
     const result = await signInWithEmailAndPassword(
@@ -19,20 +27,32 @@ const prijavi = async () => {
       email.value,
       lozinka.value,
     );
+
     const userDoc = await getDoc(doc(db, "korisnici", result.user.uid));
 
-    if (userDoc.exists() && userDoc.data().status === "blokiran") {
+    if (!userDoc.exists()) {
+      await signOut(auth);
+      greska.value = "Korisnički podaci nisu pronađeni.";
+      return;
+    }
+
+    const korisnik = userDoc.data();
+
+    if (korisnik.status === "blokiran") {
+      await signOut(auth);
       greska.value = "Ovaj korisnički račun je blokiran.";
       return;
     }
 
-    if (userDoc.exists() && userDoc.data().uloga === "admin") {
+    if (korisnik.uloga === "admin") {
       router.push("/admin");
     } else {
       router.push("/bicikli");
     }
   } catch {
     greska.value = "Neispravan e-mail ili lozinka.";
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -51,7 +71,9 @@ const prijavi = async () => {
       <input v-model="lozinka" type="password" @keyup.enter="prijavi" />
     </div>
 
-    <button class="btn btn-primary" @click="prijavi">Prijavi se</button>
+    <button class="btn btn-primary" :disabled="loading" @click="prijavi">
+      {{ loading ? "Prijava..." : "Prijavi se" }}
+    </button>
 
     <p v-if="greska" class="notice error">{{ greska }}</p>
 

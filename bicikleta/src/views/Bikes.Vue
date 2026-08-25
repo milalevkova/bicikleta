@@ -7,8 +7,11 @@ import BikeCard from "../components/BikeCard.vue";
 const bicikli = ref([]);
 const pretraga = ref("");
 const vrsta = ref("");
+const loading = ref(true);
 
 const ucitaj = async () => {
+  loading.value = true;
+
   const q = query(collection(db, "bicikli"), where("aktivan", "==", true));
   const snap = await getDocs(q);
 
@@ -16,15 +19,20 @@ const ucitaj = async () => {
     id: d.id,
     ...d.data(),
   }));
+
+  loading.value = false;
 };
 
 const filtrirani = computed(() => {
   return bicikli.value.filter((b) => {
-    const nazivOk = (b.naziv || "")
-      .toLowerCase()
-      .includes(pretraga.value.toLowerCase());
+    const naziv = (b.naziv || "").toLowerCase();
+    const lokacija = (b.lokacija || "").toLowerCase();
+    const trazeno = pretraga.value.toLowerCase();
+
+    const pretragaOk = naziv.includes(trazeno) || lokacija.includes(trazeno);
     const vrstaOk = !vrsta.value || b.vrsta === vrsta.value;
-    return nazivOk && vrstaOk;
+
+    return pretragaOk && vrstaOk;
   });
 });
 
@@ -41,7 +49,7 @@ onMounted(ucitaj);
     >
       <input
         v-model="pretraga"
-        placeholder="Pretraži bicikle..."
+        placeholder="Pretraži po nazivu ili lokaciji..."
         style="
           padding: 10px;
           border: 1px solid #ccd5cf;
@@ -49,6 +57,7 @@ onMounted(ucitaj);
           flex: 1;
         "
       />
+
       <select
         v-model="vrsta"
         style="padding: 10px; border: 1px solid #ccd5cf; border-radius: 10px"
@@ -60,11 +69,13 @@ onMounted(ucitaj);
       </select>
     </div>
 
-    <div class="grid grid-3">
+    <p v-if="loading">Učitavanje...</p>
+
+    <div v-else class="grid grid-3">
       <BikeCard v-for="bike in filtrirani" :key="bike.id" :bike="bike" />
     </div>
 
-    <p v-if="filtrirani.length === 0" class="muted">
+    <p v-if="!loading && filtrirani.length === 0" class="muted">
       Nema pronađenih bicikala.
     </p>
   </section>
