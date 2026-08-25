@@ -8,6 +8,11 @@
   </div>
 </template>
 
+
+
+
+asdfghjklčdfvgbhnjm
+
 <style scoped>
 .logo-block {
   display: flex;
