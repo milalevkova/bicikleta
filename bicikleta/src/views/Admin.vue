@@ -29,7 +29,6 @@ const noviBicikl = ref({
   vrsta: "gradski",
   opis: "",
   cijenaPoSatu: 4,
-  lokacija: "",
   stanje: "dostupan",
   aktivan: true,
   slika: "",
@@ -42,7 +41,6 @@ const uredjeniBicikl = ref({
   vrsta: "gradski",
   opis: "",
   cijenaPoSatu: 4,
-  lokacija: "",
   stanje: "dostupan",
   aktivan: true,
   slika: "",
@@ -55,9 +53,7 @@ const provjeriAdmina = async () => {
     return;
   }
 
-  const snap = await getDoc(
-    doc(db, "korisnici", auth.currentUser.uid)
-  );
+  const snap = await getDoc(doc(db, "korisnici", auth.currentUser.uid));
 
   if (!snap.exists()) {
     router.push("/");
@@ -75,21 +71,13 @@ const provjeriAdmina = async () => {
 };
 
 const ucitajSve = async () => {
-  const bicikliSnap = await getDocs(
-    collection(db, "bicikli")
-  );
+  const bicikliSnap = await getDocs(collection(db, "bicikli"));
 
-  const korisniciSnap = await getDocs(
-    collection(db, "korisnici")
-  );
+  const korisniciSnap = await getDocs(collection(db, "korisnici"));
 
-  const rezervacijeSnap = await getDocs(
-    collection(db, "rezervacije")
-  );
+  const rezervacijeSnap = await getDocs(collection(db, "rezervacije"));
 
-  const najmoviSnap = await getDocs(
-    collection(db, "najmovi")
-  );
+  const najmoviSnap = await getDocs(collection(db, "najmovi"));
 
   bicikli.value = [];
   korisnici.value = [];
@@ -131,16 +119,11 @@ const dodajBicikl = async () => {
     oznaka: noviBicikl.value.oznaka,
     vrsta: noviBicikl.value.vrsta,
     opis: noviBicikl.value.opis,
-    cijenaPoSatu: Number(
-      noviBicikl.value.cijenaPoSatu
-    ),
-    lokacija: noviBicikl.value.lokacija,
+    cijenaPoSatu: Number(noviBicikl.value.cijenaPoSatu),
     stanje: noviBicikl.value.stanje,
     aktivan: noviBicikl.value.aktivan,
     slika: noviBicikl.value.slika,
-    kolicina: Number(
-      noviBicikl.value.kolicina
-    ),
+    kolicina: Number(noviBicikl.value.kolicina),
     datumDodavanja: serverTimestamp(),
   });
 
@@ -150,7 +133,6 @@ const dodajBicikl = async () => {
     vrsta: "gradski",
     opis: "",
     cijenaPoSatu: 4,
-    lokacija: "",
     stanje: "dostupan",
     aktivan: true,
     slika: "",
@@ -169,7 +151,6 @@ const urediBicikl = (b) => {
     vrsta: b.vrsta,
     opis: b.opis,
     cijenaPoSatu: b.cijenaPoSatu,
-    lokacija: b.lokacija,
     stanje: b.stanje,
     aktivan: b.aktivan,
     slika: b.slika || "",
@@ -178,25 +159,17 @@ const urediBicikl = (b) => {
 };
 
 const spremiPromjene = async () => {
-  await updateDoc(
-    doc(db, "bicikli", uredjujemId.value),
-    {
-      naziv: uredjeniBicikl.value.naziv,
-      oznaka: uredjeniBicikl.value.oznaka,
-      vrsta: uredjeniBicikl.value.vrsta,
-      opis: uredjeniBicikl.value.opis,
-      cijenaPoSatu: Number(
-        uredjeniBicikl.value.cijenaPoSatu
-      ),
-      lokacija: uredjeniBicikl.value.lokacija,
-      stanje: uredjeniBicikl.value.stanje,
-      aktivan: uredjeniBicikl.value.aktivan,
-      slika: uredjeniBicikl.value.slika,
-      kolicina: Number(
-        uredjeniBicikl.value.kolicina
-      ),
-    }
-  );
+  await updateDoc(doc(db, "bicikli", uredjujemId.value), {
+    naziv: uredjeniBicikl.value.naziv,
+    oznaka: uredjeniBicikl.value.oznaka,
+    vrsta: uredjeniBicikl.value.vrsta,
+    opis: uredjeniBicikl.value.opis,
+    cijenaPoSatu: Number(uredjeniBicikl.value.cijenaPoSatu),
+    stanje: uredjeniBicikl.value.stanje,
+    aktivan: uredjeniBicikl.value.aktivan,
+    slika: uredjeniBicikl.value.slika,
+    kolicina: Number(uredjeniBicikl.value.kolicina),
+  });
 
   uredjujemId.value = null;
 
@@ -208,8 +181,8 @@ const odustaniOdUredjivanja = () => {
 };
 
 const promijeniAktivnostBicikla = async (b) => {
-  let novoStanje;
   let novaAktivnost;
+  let novoStanje;
 
   if (b.aktivan) {
     novaAktivnost = false;
@@ -219,13 +192,10 @@ const promijeniAktivnostBicikla = async (b) => {
     novoStanje = "dostupan";
   }
 
-  await updateDoc(
-    doc(db, "bicikli", b.id),
-    {
-      aktivan: novaAktivnost,
-      stanje: novoStanje,
-    }
-  );
+  await updateDoc(doc(db, "bicikli", b.id), {
+    aktivan: novaAktivnost,
+    stanje: novoStanje,
+  });
 
   await ucitajSve();
 };
@@ -239,20 +209,15 @@ const promijeniStatusKorisnika = async (k) => {
     noviStatus = "blokiran";
   }
 
-  await updateDoc(
-    doc(db, "korisnici", k.id),
-    {
-      status: noviStatus,
-    }
-  );
+  await updateDoc(doc(db, "korisnici", k.id), {
+    status: noviStatus,
+  });
 
   await ucitajSve();
 };
 
 const dohvatiKorisnika = (id) => {
-  const korisnik = korisnici.value.find(
-    (k) => k.id === id
-  );
+  const korisnik = korisnici.value.find((k) => k.id === id);
 
   if (!korisnik) {
     return id;
@@ -262,9 +227,7 @@ const dohvatiKorisnika = (id) => {
 };
 
 const dohvatiBicikl = (id) => {
-  const bicikl = bicikli.value.find(
-    (b) => b.id === id
-  );
+  const bicikl = bicikli.value.find((b) => b.id === id);
 
   if (!bicikl) {
     return id;
@@ -278,17 +241,14 @@ const formatDatum = (datum) => {
     return "-";
   }
 
-  return datum
-    .toDate()
-    .toLocaleString("hr-HR");
+  return datum.toDate().toLocaleString("hr-HR");
 };
 
 const brojBicikala = () => {
   let ukupno = 0;
 
   for (const b of bicikli.value) {
-    ukupno =
-      ukupno + Number(b.kolicina || 1);
+    ukupno = ukupno + Number(b.kolicina || 1);
   }
 
   return ukupno;
@@ -323,8 +283,7 @@ const ukupnaZarada = () => {
 
   for (const n of najmovi.value) {
     if (n.ukupnaCijena) {
-      ukupno =
-        ukupno + Number(n.ukupnaCijena);
+      ukupno = ukupno + Number(n.ukupnaCijena);
     }
   }
 
@@ -340,10 +299,7 @@ onMounted(() => {
   <section v-if="dozvoljen">
     <h1>Administracija</h1>
 
-    <div
-      class="grid grid-3"
-      style="margin-bottom: 26px"
-    >
+    <div class="grid grid-3" style="margin-bottom: 26px">
       <div class="card">
         <strong>{{ brojBicikala() }}</strong>
         <p>Bicikala</p>
@@ -355,33 +311,24 @@ onMounted(() => {
       </div>
 
       <div class="card">
-        <strong>
-          {{ brojAktivnihNajmova() }}
-        </strong>
+        <strong>{{ brojAktivnihNajmova() }}</strong>
         <p>Aktivnih najmova</p>
       </div>
 
       <div class="card">
-        <strong>
-          {{ brojAktivnihRezervacija() }}
-        </strong>
+        <strong>{{ brojAktivnihRezervacija() }}</strong>
         <p>Aktivnih rezervacija</p>
       </div>
 
       <div class="card">
-        <strong>
-          {{ ukupnaZarada() }} €
-        </strong>
+        <strong>{{ ukupnaZarada() }} €</strong>
         <p>Ukupna zarada</p>
       </div>
     </div>
 
     <h2>Dodaj bicikl</h2>
 
-    <div
-      class="card form"
-      style="margin-bottom: 30px"
-    >
+    <div class="card form" style="margin-bottom: 30px">
       <div class="form-row">
         <label>Naziv</label>
         <input v-model="noviBicikl.naziv" />
@@ -396,17 +343,12 @@ onMounted(() => {
         <label>Vrsta</label>
 
         <select v-model="noviBicikl.vrsta">
-          <option value="gradski">
-            Gradski
-          </option>
-
-          <option value="elektricni">
-            Električni
-          </option>
-
-          <option value="brdski">
-            Brdski
-          </option>
+          <option value="gradski">Gradski</option>
+          <option value="elektricni">Električni</option>
+          <option value="brdski">Brdski</option>
+          <option value="trekking">Trekking</option>
+          <option value="djecji">Dječji</option>
+          <option value="tandem">Tandem</option>
         </select>
       </div>
 
@@ -418,26 +360,13 @@ onMounted(() => {
       <div class="form-row">
         <label>Cijena po satu</label>
 
-        <input
-          v-model.number="noviBicikl.cijenaPoSatu"
-          type="number"
-          min="0"
-        />
-      </div>
-
-      <div class="form-row">
-        <label>Lokacija</label>
-        <input v-model="noviBicikl.lokacija" />
+        <input v-model.number="noviBicikl.cijenaPoSatu" type="number" min="0" />
       </div>
 
       <div class="form-row">
         <label>Količina</label>
 
-        <input
-          v-model.number="noviBicikl.kolicina"
-          type="number"
-          min="1"
-        />
+        <input v-model.number="noviBicikl.kolicina" type="number" min="1" />
       </div>
 
       <div class="form-row">
@@ -445,12 +374,7 @@ onMounted(() => {
         <input v-model="noviBicikl.slika" />
       </div>
 
-      <button
-        class="btn btn-primary"
-        @click="dodajBicikl"
-      >
-        Dodaj bicikl
-      </button>
+      <button class="btn btn-primary" @click="dodajBicikl">Dodaj bicikl</button>
     </div>
 
     <h2>Bicikli</h2>
@@ -470,10 +394,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr
-            v-for="b in bicikli"
-            :key="b.id"
-          >
+          <tr v-for="b in bicikli" :key="b.id">
             <td>{{ b.naziv }}</td>
             <td>{{ b.vrsta }}</td>
             <td>{{ b.cijenaPoSatu }} €</td>
@@ -482,10 +403,7 @@ onMounted(() => {
             <td>{{ b.aktivan ? "DA" : "NE" }}</td>
 
             <td>
-              <button
-                class="btn btn-primary"
-                @click="urediBicikl(b)"
-              >
+              <button class="btn btn-primary" @click="urediBicikl(b)">
                 Uredi
               </button>
 
@@ -501,11 +419,7 @@ onMounted(() => {
       </table>
     </div>
 
-    <div
-      v-if="uredjujemId"
-      class="card form"
-      style="margin-top: 25px"
-    >
+    <div v-if="uredjujemId" class="card form" style="margin-top: 25px">
       <h2>Uredi bicikl</h2>
 
       <div class="form-row">
@@ -522,17 +436,12 @@ onMounted(() => {
         <label>Vrsta</label>
 
         <select v-model="uredjeniBicikl.vrsta">
-          <option value="gradski">
-            Gradski
-          </option>
-
-          <option value="elektricni">
-            Električni
-          </option>
-
-          <option value="brdski">
-            Brdski
-          </option>
+          <option value="gradski">Gradski</option>
+          <option value="elektricni">Električni</option>
+          <option value="brdski">Brdski</option>
+          <option value="trekking">Trekking</option>
+          <option value="djecji">Dječji</option>
+          <option value="tandem">Tandem</option>
         </select>
       </div>
 
@@ -552,31 +461,17 @@ onMounted(() => {
       </div>
 
       <div class="form-row">
-        <label>Lokacija</label>
-        <input v-model="uredjeniBicikl.lokacija" />
-      </div>
-
-      <div class="form-row">
         <label>Količina</label>
 
-        <input
-          v-model.number="uredjeniBicikl.kolicina"
-          type="number"
-          min="1"
-        />
+        <input v-model.number="uredjeniBicikl.kolicina" type="number" min="1" />
       </div>
 
       <div class="form-row">
         <label>Stanje</label>
 
         <select v-model="uredjeniBicikl.stanje">
-          <option value="dostupan">
-            Dostupan
-          </option>
-
-          <option value="nedostupan">
-            Nedostupan
-          </option>
+          <option value="dostupan">Dostupan</option>
+          <option value="nedostupan">Nedostupan</option>
         </select>
       </div>
 
@@ -585,24 +480,16 @@ onMounted(() => {
         <input v-model="uredjeniBicikl.slika" />
       </div>
 
-      <button
-        class="btn btn-primary"
-        @click="spremiPromjene"
-      >
+      <button class="btn btn-primary" @click="spremiPromjene">
         Spremi promjene
       </button>
 
-      <button
-        class="btn btn-secondary"
-        @click="odustaniOdUredjivanja"
-      >
+      <button class="btn btn-secondary" @click="odustaniOdUredjivanja">
         Odustani
       </button>
     </div>
 
-    <h2 style="margin-top: 30px">
-      Korisnici
-    </h2>
+    <h2 style="margin-top: 30px">Korisnici</h2>
 
     <div class="table-wrap card">
       <table>
@@ -617,14 +504,8 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr
-            v-for="k in korisnici"
-            :key="k.id"
-          >
-            <td>
-              {{ k.ime }} {{ k.prezime }}
-            </td>
-
+          <tr v-for="k in korisnici" :key="k.id">
+            <td>{{ k.ime }} {{ k.prezime }}</td>
             <td>{{ k.email }}</td>
             <td>{{ k.uloga }}</td>
             <td>{{ k.status }}</td>
@@ -635,11 +516,7 @@ onMounted(() => {
                 class="btn btn-secondary"
                 @click="promijeniStatusKorisnika(k)"
               >
-                {{
-                  k.status === "blokiran"
-                    ? "Aktiviraj"
-                    : "Blokiraj"
-                }}
+                {{ k.status === "blokiran" ? "Aktiviraj" : "Blokiraj" }}
               </button>
             </td>
           </tr>
@@ -647,9 +524,7 @@ onMounted(() => {
       </table>
     </div>
 
-    <h2 style="margin-top: 30px">
-      Sve rezervacije
-    </h2>
+    <h2 style="margin-top: 30px">Sve rezervacije</h2>
 
     <div class="table-wrap card">
       <table>
@@ -664,10 +539,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr
-            v-for="r in rezervacije"
-            :key="r.id"
-          >
+          <tr v-for="r in rezervacije" :key="r.id">
             <td>
               {{ dohvatiKorisnika(r.korisnikId) }}
             </td>
@@ -684,21 +556,19 @@ onMounted(() => {
               {{ formatDatum(r.planiraniKraj) }}
             </td>
 
-            <td>{{ r.status }}</td>
+            <td>
+              {{ r.status }}
+            </td>
           </tr>
 
           <tr v-if="rezervacije.length === 0">
-            <td colspan="5">
-              Nema rezervacija.
-            </td>
+            <td colspan="5">Nema rezervacija.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <h2 style="margin-top: 30px">
-      Svi najmovi
-    </h2>
+    <h2 style="margin-top: 30px">Svi najmovi</h2>
 
     <div class="table-wrap card">
       <table>
@@ -714,10 +584,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr
-            v-for="n in najmovi"
-            :key="n.id"
-          >
+          <tr v-for="n in najmovi" :key="n.id">
             <td>
               {{ dohvatiKorisnika(n.korisnikId) }}
             </td>
@@ -734,23 +601,21 @@ onMounted(() => {
               {{ formatDatum(n.vrijemeZavrsetka) }}
             </td>
 
-            <td>{{ n.status }}</td>
+            <td>
+              {{ n.status }}
+            </td>
 
             <td>
               <span v-if="n.ukupnaCijena != null">
                 {{ Number(n.ukupnaCijena).toFixed(2) }} €
               </span>
 
-              <span v-else>
-                -
-              </span>
+              <span v-else> - </span>
             </td>
           </tr>
 
           <tr v-if="najmovi.length === 0">
-            <td colspan="6">
-              Nema najmova.
-            </td>
+            <td colspan="6">Nema najmova.</td>
           </tr>
         </tbody>
       </table>

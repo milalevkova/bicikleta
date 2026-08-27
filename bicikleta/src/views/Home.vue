@@ -95,13 +95,13 @@ const odjava = async () => {
 
       <div class="hero-facts">
         <div>
-          <strong>4+</strong>
-          <span>lokacije</span>
+          <strong>105</strong>
+          <span>bicikala</span>
         </div>
 
         <div>
-          <strong>24/7</strong>
-          <span>pregled bicikala</span>
+          <strong>6</strong>
+          <span>vrsta bicikala</span>
         </div>
 
         <div>

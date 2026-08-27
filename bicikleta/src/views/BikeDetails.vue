@@ -8,6 +8,8 @@ import {
   addDoc,
   getDocs,
   serverTimestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import { db, auth } from "../firebase/firebase";
 
@@ -20,10 +22,14 @@ const kraj = ref("");
 const greska = ref("");
 const minimalniDatum = ref("");
 
+const recenzije = ref([]);
+const ocjena = ref(5);
+const komentar = ref("");
+const mozeRecenzirati = ref(false);
+const porukaRecenzija = ref("");
+
 const ucitaj = async () => {
-  const snap = await getDoc(
-    doc(db, "bicikli", route.params.id)
-  );
+  const snap = await getDoc(doc(db, "bicikli", route.params.id));
 
   if (snap.exists()) {
     bicikl.value = {
@@ -31,6 +37,104 @@ const ucitaj = async () => {
       ...snap.data(),
     };
   }
+};
+
+const ucitajRecenzije = async () => {
+  const snap = await getDocs(collection(db, "recenzije"));
+
+  recenzije.value = [];
+
+  snap.forEach((d) => {
+    const r = d.data();
+
+    if (r.biciklId === route.params.id) {
+      recenzije.value.push({
+        id: d.id,
+        ...r,
+      });
+    }
+  });
+};
+
+const provjeriMozeLiRecenzirati = async () => {
+  if (!auth.currentUser) {
+    return;
+  }
+
+  const q = query(
+    collection(db, "najmovi"),
+    where("korisnikId", "==", auth.currentUser.uid),
+  );
+
+  const najmoviSnap = await getDocs(q);
+
+  let zavrsenNajam = false;
+
+  najmoviSnap.forEach((d) => {
+    const najam = d.data();
+
+    if (
+      najam.korisnikId === auth.currentUser.uid &&
+      najam.biciklId === route.params.id &&
+      najam.status === "zavrsen"
+    ) {
+      zavrsenNajam = true;
+    }
+  });
+
+  mozeRecenzirati.value = zavrsenNajam;
+};
+
+const dodajRecenziju = async () => {
+  porukaRecenzija.value = "";
+
+  if (!auth.currentUser) {
+    router.push("/prijava");
+    return;
+  }
+
+  if (!mozeRecenzirati.value) {
+    porukaRecenzija.value =
+      "Recenziju možeš ostaviti nakon završenog najma ovog bicikla.";
+    return;
+  }
+
+  if (komentar.value.trim() === "") {
+    porukaRecenzija.value = "Napiši komentar.";
+    return;
+  }
+
+  for (const r of recenzije.value) {
+    if (r.korisnikId === auth.currentUser.uid) {
+      porukaRecenzija.value = "Već si ostavio/la recenziju za ovaj bicikl.";
+      return;
+    }
+  }
+
+  const korisnikSnap = await getDoc(doc(db, "korisnici", auth.currentUser.uid));
+
+  let imeKorisnika = "Korisnik";
+
+  if (korisnikSnap.exists()) {
+    const korisnik = korisnikSnap.data();
+
+    imeKorisnika = korisnik.ime + " " + korisnik.prezime;
+  }
+
+  await addDoc(collection(db, "recenzije"), {
+    korisnikId: auth.currentUser.uid,
+    korisnikIme: imeKorisnika,
+    biciklId: bicikl.value.id,
+    ocjena: Number(ocjena.value),
+    komentar: komentar.value,
+    datum: serverTimestamp(),
+  });
+
+  ocjena.value = 5;
+  komentar.value = "";
+  porukaRecenzija.value = "Recenzija je uspješno dodana.";
+
+  await ucitajRecenzije();
 };
 
 const procijenjenaCijena = computed(() => {
@@ -48,8 +152,7 @@ const procijenjenaCijena = computed(() => {
   const razlika = end.getTime() - start.getTime();
   const sati = razlika / 3600000;
 
-  const cijena =
-    sati * Number(bicikl.value.cijenaPoSatu);
+  const cijena = sati * Number(bicikl.value.cijenaPoSatu);
 
   return cijena.toFixed(2);
 });
@@ -63,8 +166,7 @@ const rezerviraj = async () => {
   }
 
   if (!pocetak.value || !kraj.value) {
-    greska.value =
-      "Odaberi početak i kraj rezervacije.";
+    greska.value = "Odaberi početak i kraj rezervacije.";
     return;
   }
 
@@ -73,20 +175,16 @@ const rezerviraj = async () => {
   const sada = new Date();
 
   if (start < sada) {
-    greska.value =
-      "Početak rezervacije ne može biti u prošlosti.";
+    greska.value = "Početak rezervacije ne može biti u prošlosti.";
     return;
   }
 
   if (end <= start) {
-    greska.value =
-      "Kraj rezervacije mora biti nakon početka.";
+    greska.value = "Kraj rezervacije mora biti nakon početka.";
     return;
   }
 
-  const bikeSnap = await getDoc(
-    doc(db, "bicikli", bicikl.value.id)
-  );
+  const bikeSnap = await getDoc(doc(db, "bicikli", bicikl.value.id));
 
   if (!bikeSnap.exists()) {
     greska.value = "Bicikl ne postoji.";
@@ -95,18 +193,12 @@ const rezerviraj = async () => {
 
   const bike = bikeSnap.data();
 
-  if (
-    bike.aktivan === false ||
-    bike.stanje === "nedostupan"
-  ) {
-    greska.value =
-      "Bicikl trenutno nije dostupan.";
+  if (bike.aktivan === false || bike.stanje === "nedostupan") {
+    greska.value = "Bicikl trenutno nije dostupan.";
     return;
   }
 
-  const rezervacijeSnap = await getDocs(
-    collection(db, "rezervacije")
-  );
+  const rezervacijeSnap = await getDocs(collection(db, "rezervacije"));
 
   let zauzeto = 0;
 
@@ -119,20 +211,15 @@ const rezerviraj = async () => {
       rezervacija.planiraniPocetak &&
       rezervacija.planiraniKraj
     ) {
-      const postojeciPocetak =
-        rezervacija.planiraniPocetak.toDate();
+      const postojeciPocetak = rezervacija.planiraniPocetak.toDate();
 
-      const postojeciKraj =
-        rezervacija.planiraniKraj.toDate();
+      const postojeciKraj = rezervacija.planiraniKraj.toDate();
 
       const krajSTolerancijom = new Date(
-        postojeciKraj.getTime() + 15 * 60 * 1000
+        postojeciKraj.getTime() + 15 * 60 * 1000,
       );
 
-      if (
-        postojeciPocetak < end &&
-        krajSTolerancijom > start
-      ) {
+      if (postojeciPocetak < end && krajSTolerancijom > start) {
         zauzeto++;
       }
     }
@@ -141,162 +228,211 @@ const rezerviraj = async () => {
   const kolicina = Number(bike.kolicina || 1);
 
   if (zauzeto >= kolicina) {
-    greska.value =
-      "Nema dostupnih bicikala u odabranom terminu.";
+    greska.value = "Nema dostupnih bicikala u odabranom terminu.";
     return;
   }
 
-  await addDoc(
-    collection(db, "rezervacije"),
-    {
-      korisnikId: auth.currentUser.uid,
-      biciklId: bicikl.value.id,
-      datumRezervacije: serverTimestamp(),
-      planiraniPocetak: start,
-      planiraniKraj: end,
-      status: "aktivna",
-    }
-  );
+  await addDoc(collection(db, "rezervacije"), {
+    korisnikId: auth.currentUser.uid,
+    biciklId: bicikl.value.id,
+    datumRezervacije: serverTimestamp(),
+    planiraniPocetak: start,
+    planiraniKraj: end,
+    status: "aktivna",
+  });
 
   router.push("/rezervacije");
 };
 
 onMounted(() => {
   ucitaj();
+  ucitajRecenzije();
+  provjeriMozeLiRecenzirati();
 
   const sada = new Date();
 
-  sada.setMinutes(
-    sada.getMinutes() - sada.getTimezoneOffset()
-  );
+  sada.setMinutes(sada.getMinutes() - sada.getTimezoneOffset());
 
-  minimalniDatum.value =
-    sada.toISOString().slice(0, 16);
+  minimalniDatum.value = sada.toISOString().slice(0, 16);
 });
 </script>
 
 <template>
-  <section v-if="bicikl" class="card">
-    <div
-      class="grid"
-      style="
-        grid-template-columns:
-          minmax(220px, 0.8fr) 1.2fr;
-      "
-    >
+  <section v-if="bicikl">
+    <div class="card">
       <div
-        style="
-          background: #eef5ef;
-          border-radius: 18px;
-          display: grid;
-          place-items: center;
-          min-height: 300px;
-          overflow: hidden;
-        "
+        class="grid"
+        style="grid-template-columns: minmax(220px, 0.8fr) 1.2fr"
       >
-        <img
-          v-if="bicikl.slika && bicikl.slika !== 'url'"
-          :src="bicikl.slika"
-          :alt="bicikl.naziv"
+        <div
           style="
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
+            background: #eef5ef;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            min-height: 300px;
+            overflow: hidden;
           "
-        />
+        >
+          <img
+            v-if="bicikl.slika && bicikl.slika !== 'url'"
+            :src="bicikl.slika"
+            :alt="bicikl.naziv"
+            style="width: 100%; height: 300px; object-fit: contain"
+          />
 
-        <span v-else style="font-size: 120px">
-          🚲
-        </span>
-      </div>
+          <span v-else style="font-size: 120px"> 🚲 </span>
+        </div>
 
-      <div>
-        <span class="status">
-          {{ bicikl.stanje }}
-        </span>
+        <div>
+          <span class="status">
+            {{ bicikl.stanje }}
+          </span>
 
-        <h1>{{ bicikl.naziv }}</h1>
+          <h1>
+            {{ bicikl.naziv }}
+          </h1>
 
-        <p>{{ bicikl.opis }}</p>
-
-        <p>
-          <strong>Vrsta:</strong>
-          {{ bicikl.vrsta }}
-        </p>
-
-        <p>
-          <strong>Lokacija:</strong>
-          {{ bicikl.lokacija || "Nije unesena" }}
-        </p>
-
-        <p>
-          <strong>Količina:</strong>
-          {{ bicikl.kolicina || 1 }}
-        </p>
-
-        <p>
-          <strong>Cijena:</strong>
-          {{ Number(bicikl.cijenaPoSatu).toFixed(2) }} €/sat
-        </p>
-
-        <div class="form" style="margin-top: 22px">
-          <div class="form-row">
-            <label>Planirani početak</label>
-
-            <input
-              type="datetime-local"
-              v-model="pocetak"
-              :min="minimalniDatum"
-            />
-          </div>
-
-          <div class="form-row">
-            <label>Planirani kraj</label>
-
-            <input
-              type="datetime-local"
-              v-model="kraj"
-              :min="minimalniDatum"
-            />
-          </div>
-
-          <div
-            v-if="procijenjenaCijena !== null"
-            class="card"
-            style="
-              margin-top: 10px;
-              margin-bottom: 10px;
-            "
-          >
-            <strong>
-              Procijenjena cijena:
-              {{ procijenjenaCijena }} €
-            </strong>
-          </div>
-
-          <button
-            class="btn btn-primary"
-            :disabled="
-              bicikl.aktivan === false ||
-              bicikl.stanje === 'nedostupan'
-            "
-            @click="rezerviraj"
-          >
-            Rezerviraj bicikl
-          </button>
-
-          <p
-            v-if="greska"
-            class="notice error"
-          >
-            {{ greska }}
+          <p>
+            {{ bicikl.opis }}
           </p>
+
+          <p>
+            <strong>Vrsta:</strong>
+            {{ bicikl.vrsta }}
+          </p>
+
+          <p>
+            <strong>Količina:</strong>
+            {{ bicikl.kolicina || 1 }}
+          </p>
+
+          <p>
+            <strong>Cijena:</strong>
+            {{ Number(bicikl.cijenaPoSatu).toFixed(2) }}
+            €/sat
+          </p>
+
+          <div class="form" style="margin-top: 22px">
+            <div class="form-row">
+              <label> Planirani početak </label>
+
+              <input
+                type="datetime-local"
+                v-model="pocetak"
+                :min="minimalniDatum"
+              />
+            </div>
+
+            <div class="form-row">
+              <label> Planirani kraj </label>
+
+              <input
+                type="datetime-local"
+                v-model="kraj"
+                :min="minimalniDatum"
+              />
+            </div>
+
+            <div
+              v-if="procijenjenaCijena !== null"
+              class="card"
+              style="margin-top: 10px; margin-bottom: 10px"
+            >
+              <strong>
+                Procijenjena cijena:
+                {{ procijenjenaCijena }} €
+              </strong>
+            </div>
+
+            <button
+              class="btn btn-primary"
+              :disabled="
+                bicikl.aktivan === false || bicikl.stanje === 'nedostupan'
+              "
+              @click="rezerviraj"
+            >
+              Rezerviraj bicikl
+            </button>
+
+            <p v-if="greska" class="notice error">
+              {{ greska }}
+            </p>
+          </div>
         </div>
       </div>
     </div>
+
+    <div class="card" style="margin-top: 30px">
+      <h2>⭐ Recenzije</h2>
+
+      <div v-if="recenzije.length === 0">
+        <p class="muted">Ovaj bicikl još nema recenzija.</p>
+      </div>
+
+      <div
+        v-for="r in recenzije"
+        :key="r.id"
+        style="padding: 15px 0; border-bottom: 1px solid #ddd"
+      >
+        <strong>
+          {{ r.korisnikIme }}
+        </strong>
+
+        <p>
+          Ocjena:
+          <strong> {{ r.ocjena }}/5 ⭐ </strong>
+        </p>
+
+        <p>
+          {{ r.komentar }}
+        </p>
+      </div>
+    </div>
+
+    <div v-if="auth.currentUser" class="card form" style="margin-top: 20px">
+      <h2>Ostavi recenziju</h2>
+
+      <div v-if="mozeRecenzirati">
+        <div class="form-row">
+          <label>Ocjena</label>
+
+          <select v-model.number="ocjena">
+            <option :value="5">5 - Odlično</option>
+
+            <option :value="4">4 - Vrlo dobro</option>
+
+            <option :value="3">3 - Dobro</option>
+
+            <option :value="2">2 - Dovoljno</option>
+
+            <option :value="1">1 - Loše</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Komentar</label>
+
+          <textarea
+            v-model="komentar"
+            placeholder="Napiši svoje iskustvo..."
+          ></textarea>
+        </div>
+
+        <button class="btn btn-primary" @click="dodajRecenziju">
+          Dodaj recenziju
+        </button>
+      </div>
+
+      <p v-else class="muted">
+        Recenziju možeš ostaviti nakon završenog najma ovog bicikla.
+      </p>
+
+      <p v-if="porukaRecenzija" class="notice">
+        {{ porukaRecenzija }}
+      </p>
+    </div>
   </section>
 
-  <p v-else>
-    Učitavanje...
-  </p>
+  <p v-else>Učitavanje...</p>
 </template>

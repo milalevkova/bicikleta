@@ -30,25 +30,15 @@ defineProps({
       </p>
 
       <p>
-        <strong>Lokacija:</strong>
-        {{ bike.lokacija || "Nije unesena" }}
-      </p>
-
-      <p>
         <strong>Količina:</strong>
         {{ bike.kolicina || 1 }}
       </p>
 
       <p>
-        <strong>
-          {{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat
-        </strong>
+        <strong> {{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat </strong>
       </p>
 
-      <router-link
-        class="btn btn-primary"
-        :to="`/bicikli/${bike.id}`"
-      >
+      <router-link class="btn btn-primary" :to="`/bicikli/${bike.id}`">
         Detalji
       </router-link>
     </div>
@@ -62,7 +52,7 @@ defineProps({
 }
 
 .image {
-  min-height: 160px;
+  height: 240px;
   border-radius: 14px;
   background: #f0f5f1;
   display: grid;
@@ -76,8 +66,9 @@ defineProps({
 
 .image img {
   width: 100%;
-  height: 180px;
-  object-fit: cover;
+  height: 220px;
+  object-fit: contain;
+  padding: 10px;
 }
 
 .top {

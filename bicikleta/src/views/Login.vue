@@ -38,7 +38,7 @@ const prijavi = async () => {
 </script>
 
 <template>
-  <section class="card form">
+  <section class="card form" style="max-width: 500px; margin: 35px auto">
     <h1 class="section-title">Prijava</h1>
 
     <div class="form-row">

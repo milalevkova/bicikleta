@@ -103,8 +103,6 @@
   color: #f5e9d7;
 }
 
-/* UKRASNE KRUŽNICE */
-
 .logo-decoration {
   position: absolute;
 

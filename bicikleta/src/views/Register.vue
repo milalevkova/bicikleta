@@ -55,7 +55,7 @@ const registriraj = async () => {
 </script>
 
 <template>
-  <section class="card form">
+  <section class="card form" style="max-width: 500px; margin: 35px auto">
     <h1 class="section-title">Registracija</h1>
 
     <div class="form-row"><label>Ime</label><input v-model="ime" /></div>
