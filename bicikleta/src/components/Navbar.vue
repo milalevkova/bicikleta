@@ -91,6 +91,11 @@ const odjava = async () => {
           <span>Moji najmovi</span>
         </router-link>
 
+        <router-link to="/profil" class="nav-item">
+          <span class="nav-icon">👤</span>
+          <span>Profil</span>
+        </router-link>
+
         <button class="nav-item logout-button" @click="odjava">
           <span class="nav-icon">🚪</span>
           <span>Odjava</span>
@@ -101,12 +106,18 @@ const odjava = async () => {
            ADMINISTRATOR
       ========================== -->
 
-      <template v-else-if="uloga === 'administrator'">
-        <button class="nav-item logout-button" @click="odjava">
-          <span class="nav-icon">🚪</span>
-          <span>Odjava</span>
-        </button>
-      </template>
+    <template v-else-if="uloga === 'admin'">
+  <router-link to="/admin" class="nav-item">
+    <span class="nav-icon">⚙️</span>
+    <span>Administracija</span>
+  </router-link>
+
+  <button class="nav-item logout-button" @click="odjava">
+    <span class="nav-icon">🚪</span>
+    <span>Odjava</span>
+  </button>
+</template>
+
     </nav>
   </header>
 </template>

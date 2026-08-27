@@ -15,6 +15,7 @@ defineProps({
         :src="bike.slika"
         :alt="bike.naziv"
       />
+
       <span v-else>🚲</span>
     </div>
 
@@ -25,13 +26,29 @@ defineProps({
       </div>
 
       <p class="muted">
-        {{ bike.vrsta }} · {{ bike.lokacija || "Lokacija nije unesena" }}
-      </p>
-      <p>
-        <strong>{{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat</strong>
+        {{ bike.vrsta }}
       </p>
 
-      <router-link class="btn btn-primary" :to="`/bicikli/${bike.id}`">
+      <p>
+        <strong>Lokacija:</strong>
+        {{ bike.lokacija || "Nije unesena" }}
+      </p>
+
+      <p>
+        <strong>Količina:</strong>
+        {{ bike.kolicina || 1 }}
+      </p>
+
+      <p>
+        <strong>
+          {{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat
+        </strong>
+      </p>
+
+      <router-link
+        class="btn btn-primary"
+        :to="`/bicikli/${bike.id}`"
+      >
         Detalji
       </router-link>
     </div>
