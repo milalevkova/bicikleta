@@ -25,19 +25,37 @@ onMounted(ucitaj);
 </script>
 
 <template>
-  <section v-if="profil" class="card form">
+  <section
+    v-if="profil"
+    class="card form"
+    style="max-width: 500px; margin: 35px auto; width: 100%"
+  >
     <h1>Profil</h1>
-    <div class="form-row"><label>Ime</label><input v-model="profil.ime" /></div>
+
     <div class="form-row">
-      <label>Prezime</label><input v-model="profil.prezime" />
+      <label>Ime</label>
+      <input v-model="profil.ime" />
     </div>
+
     <div class="form-row">
-      <label>E-mail</label><input :value="profil.email" disabled />
+      <label>Prezime</label>
+      <input v-model="profil.prezime" />
     </div>
+
     <div class="form-row">
-      <label>Telefon</label><input v-model="profil.telefon" />
+      <label>E-mail</label>
+      <input :value="profil.email" disabled />
     </div>
+
+    <div class="form-row">
+      <label>Telefon</label>
+      <input v-model="profil.telefon" />
+    </div>
+
     <button class="btn btn-primary" @click="spremi">Spremi promjene</button>
-    <p v-if="poruka" class="notice">{{ poruka }}</p>
+
+    <p v-if="poruka" class="notice">
+      {{ poruka }}
+    </p>
   </section>
 </template>
