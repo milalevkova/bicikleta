@@ -22,7 +22,12 @@ defineProps({
     <div>
       <div class="top">
         <h3>{{ bike.naziv }}</h3>
-        <span class="status">{{ bike.stanje }}</span>
+
+        <span
+          :class="['status', bike.statusPrikaz === 'nedostupan' ? 'red' : '']"
+        >
+          {{ bike.statusPrikaz }}
+        </span>
       </div>
 
       <p class="muted">
@@ -30,15 +35,20 @@ defineProps({
       </p>
 
       <p>
-        <strong>Količina:</strong>
+        <strong>Ukupno bicikala:</strong>
         {{ bike.kolicina || 1 }}
+      </p>
+
+      <p v-if="bike.trenutnoDostupno !== null">
+        <strong>Trenutno slobodno:</strong>
+        {{ bike.trenutnoDostupno }}
       </p>
 
       <p>
         <strong> {{ Number(bike.cijenaPoSatu).toFixed(2) }} €/sat </strong>
       </p>
 
-      <router-link class="btn btn-primary" :to="`/bicikli/${bike.id}`">
+      <router-link class="btn btn-primary" :to="'/bicikli/' + bike.id">
         Detalji
       </router-link>
     </div>
@@ -55,8 +65,9 @@ defineProps({
   height: 240px;
   border-radius: 14px;
   background: #f0f5f1;
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
 }
 
@@ -74,8 +85,8 @@ defineProps({
 .top {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
   align-items: flex-start;
+  gap: 10px;
 }
 
 h3 {

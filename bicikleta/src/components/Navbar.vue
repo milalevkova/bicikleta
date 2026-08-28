@@ -41,15 +41,15 @@ const odjava = async () => {
 
 <template>
   <header class="nav">
-    <!-- LOGO -->
+    <!-- logo -->
     <router-link to="/" class="brand">
       <span class="brand-icon">🚲</span>
       <span class="brand-text">BIČIKLETA</span>
     </router-link>
 
-    <nav class="nav-links">
-      <!-- UVIJEK VIDLJIVO -->
+    <!-- uvijek vidimo -->
 
+    <nav class="nav-links">
       <router-link to="/" class="nav-item">
         <span class="nav-icon">🏠</span>
         <span>Početna</span>
@@ -60,9 +60,7 @@ const odjava = async () => {
         <span>Bicikli</span>
       </router-link>
 
-      <!-- =========================
-           NIJE PRIJAVLJEN
-      ========================== -->
+      <!-- nije prijavljen -->
 
       <template v-if="!user">
         <router-link to="/prijava" class="nav-item">
@@ -76,9 +74,7 @@ const odjava = async () => {
         </router-link>
       </template>
 
-      <!-- =========================
-           KORISNIK
-      ========================== -->
+      <!-- obican korisnik -->
 
       <template v-else-if="uloga === 'korisnik'">
         <router-link to="/rezervacije" class="nav-item">
@@ -102,22 +98,19 @@ const odjava = async () => {
         </button>
       </template>
 
-      <!-- =========================
-           ADMINISTRATOR
-      ========================== -->
+      <!-- admin -->
 
-    <template v-else-if="uloga === 'admin'">
-  <router-link to="/admin" class="nav-item">
-    <span class="nav-icon">⚙️</span>
-    <span>Administracija</span>
-  </router-link>
+      <template v-else-if="uloga === 'admin'">
+        <router-link to="/admin" class="nav-item">
+          <span class="nav-icon">⚙️</span>
+          <span>Administracija</span>
+        </router-link>
 
-  <button class="nav-item logout-button" @click="odjava">
-    <span class="nav-icon">🚪</span>
-    <span>Odjava</span>
-  </button>
-</template>
-
+        <button class="nav-item logout-button" @click="odjava">
+          <span class="nav-icon">🚪</span>
+          <span>Odjava</span>
+        </button>
+      </template>
     </nav>
   </header>
 </template>
@@ -145,8 +138,6 @@ const odjava = async () => {
 
   box-shadow: 0 5px 25px rgba(0, 0, 0, 0.04);
 }
-
-/* LOGO */
 
 .brand {
   display: flex;
@@ -190,8 +181,6 @@ const odjava = async () => {
 
   letter-spacing: 2px;
 }
-
-/* NAV LINKOVI */
 
 .nav-links {
   display: flex;
@@ -242,8 +231,6 @@ const odjava = async () => {
   transform: translateY(-2px);
 }
 
-/* IKONICE SE POJAVLJUJU NA HOVER */
-
 .nav-icon {
   display: inline-block;
 
@@ -274,8 +261,6 @@ const odjava = async () => {
   transform: scale(1.15) rotate(0deg);
 }
 
-/* AKTIVNA STRANICA */
-
 .nav-item.router-link-active {
   color: #315c45;
 
@@ -283,8 +268,6 @@ const odjava = async () => {
 
   font-weight: 850;
 }
-
-/* REGISTRACIJA */
 
 .register-button {
   margin-left: 5px;
@@ -325,8 +308,6 @@ const odjava = async () => {
   transform: rotate(180deg) scale(1.2);
 }
 
-/* ODJAVA */
-
 .logout-button {
   color: #a9433a;
 }
@@ -336,8 +317,6 @@ const odjava = async () => {
 
   background: #f3dad6;
 }
-
-/* TABLET */
 
 @media (max-width: 1050px) {
   .nav {
@@ -353,8 +332,6 @@ const odjava = async () => {
     justify-content: center;
   }
 }
-
-/* MOBITEL */
 
 @media (max-width: 650px) {
   .nav {
@@ -394,8 +371,6 @@ const odjava = async () => {
     transform: scale(1);
   }
 }
-
-/* MALI MOBITEL */
 
 @media (max-width: 420px) {
   .nav-links {

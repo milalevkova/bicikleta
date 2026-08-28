@@ -22,11 +22,57 @@ const kraj = ref("");
 const greska = ref("");
 const minimalniDatum = ref("");
 
+const trenutnoDostupno = ref(null);
+const dostupnoUTerminu = ref(null);
+
 const recenzije = ref([]);
 const ocjena = ref(5);
 const komentar = ref("");
 const mozeRecenzirati = ref(false);
 const porukaRecenzija = ref("");
+
+const ucitajDostupnost = async () => {
+  if (!bicikl.value || !auth.currentUser) {
+    return;
+  }
+
+  const snap = await getDocs(collection(db, "rezervacije"));
+  const sada = new Date();
+  let zauzeto = 0;
+
+  snap.forEach((d) => {
+    const rezervacija = d.data();
+
+    if (rezervacija.biciklId !== bicikl.value.id) {
+      return;
+    }
+
+    if (rezervacija.status === "u_tijeku") {
+      zauzeto++;
+      return;
+    }
+
+    if (
+      rezervacija.status === "aktivna" &&
+      rezervacija.planiraniPocetak &&
+      rezervacija.planiraniKraj
+    ) {
+      const start = rezervacija.planiraniPocetak.toDate();
+      const end = rezervacija.planiraniKraj.toDate();
+      const krajSTolerancijom = new Date(end.getTime() + 15 * 60 * 1000);
+
+      if (start <= sada && krajSTolerancijom > sada) {
+        zauzeto++;
+      }
+    }
+  });
+
+  trenutnoDostupno.value = Number(bicikl.value.kolicina || 1) - zauzeto;
+
+  if (trenutnoDostupno.value < 0) {
+    trenutnoDostupno.value = 0;
+  }
+};
 
 const ucitaj = async () => {
   const snap = await getDoc(doc(db, "bicikli", route.params.id));
@@ -36,23 +82,100 @@ const ucitaj = async () => {
       id: snap.id,
       ...snap.data(),
     };
+
+    await ucitajDostupnost();
+  }
+};
+
+const statusDostupnosti = computed(() => {
+  if (!bicikl.value) {
+    return "";
+  }
+
+  if (bicikl.value.aktivan === false || bicikl.value.stanje === "nedostupan") {
+    return "nedostupan";
+  }
+
+  if (trenutnoDostupno.value === 0) {
+    return "nedostupan";
+  }
+
+  return "dostupan";
+});
+
+const brojZauzetihUTerminu = async (start, end) => {
+  const snap = await getDocs(collection(db, "rezervacije"));
+  let zauzeto = 0;
+
+  snap.forEach((d) => {
+    const rezervacija = d.data();
+
+    if (
+      rezervacija.biciklId === bicikl.value.id &&
+      (rezervacija.status === "aktivna" || rezervacija.status === "u_tijeku") &&
+      rezervacija.planiraniPocetak &&
+      rezervacija.planiraniKraj
+    ) {
+      const postojeciPocetak = rezervacija.planiraniPocetak.toDate();
+
+      const postojeciKraj = rezervacija.planiraniKraj.toDate();
+
+      const krajSTolerancijom = new Date(
+        postojeciKraj.getTime() + 15 * 60 * 1000,
+      );
+
+      if (postojeciPocetak < end && krajSTolerancijom > start) {
+        zauzeto++;
+      }
+    }
+  });
+
+  return zauzeto;
+};
+
+const provjeriTermin = async () => {
+  dostupnoUTerminu.value = null;
+  greska.value = "";
+
+  if (!auth.currentUser) {
+    return;
+  }
+
+  if (!pocetak.value || !kraj.value || !bicikl.value) {
+    return;
+  }
+
+  const start = new Date(pocetak.value);
+  const end = new Date(kraj.value);
+
+  if (end <= start) {
+    return;
+  }
+
+  const zauzeto = await brojZauzetihUTerminu(start, end);
+  const ukupno = Number(bicikl.value.kolicina || 1);
+
+  dostupnoUTerminu.value = ukupno - zauzeto;
+
+  if (dostupnoUTerminu.value < 0) {
+    dostupnoUTerminu.value = 0;
   }
 };
 
 const ucitajRecenzije = async () => {
-  const snap = await getDocs(collection(db, "recenzije"));
+  const q = query(
+    collection(db, "recenzije"),
+    where("biciklId", "==", route.params.id),
+  );
 
+  const snap = await getDocs(q);
   recenzije.value = [];
 
   snap.forEach((d) => {
-    const r = d.data();
-
-    if (r.biciklId === route.params.id) {
-      recenzije.value.push({
-        id: d.id,
-        ...r,
-      });
-    }
+    recenzije.value.push({
+      id: d.id,
+      ...d.data(),
+    });
   });
 };
 
@@ -67,17 +190,12 @@ const provjeriMozeLiRecenzirati = async () => {
   );
 
   const najmoviSnap = await getDocs(q);
-
   let zavrsenNajam = false;
 
   najmoviSnap.forEach((d) => {
     const najam = d.data();
 
-    if (
-      najam.korisnikId === auth.currentUser.uid &&
-      najam.biciklId === route.params.id &&
-      najam.status === "zavrsen"
-    ) {
+    if (najam.biciklId === route.params.id && najam.status === "zavrsen") {
       zavrsenNajam = true;
     }
   });
@@ -117,8 +235,8 @@ const dodajRecenziju = async () => {
 
   if (korisnikSnap.exists()) {
     const korisnik = korisnikSnap.data();
-
-    imeKorisnika = korisnik.ime + " " + korisnik.prezime;
+    imeKorisnika = (korisnik.ime || "") + " " + (korisnik.prezime || "");
+    imeKorisnika = imeKorisnika.trim() || "Korisnik";
   }
 
   await addDoc(collection(db, "recenzije"), {
@@ -126,7 +244,7 @@ const dodajRecenziju = async () => {
     korisnikIme: imeKorisnika,
     biciklId: bicikl.value.id,
     ocjena: Number(ocjena.value),
-    komentar: komentar.value,
+    komentar: komentar.value.trim(),
     datum: serverTimestamp(),
   });
 
@@ -151,7 +269,6 @@ const procijenjenaCijena = computed(() => {
 
   const razlika = end.getTime() - start.getTime();
   const sati = razlika / 3600000;
-
   const cijena = sati * Number(bicikl.value.cijenaPoSatu);
 
   return cijena.toFixed(2);
@@ -194,40 +311,15 @@ const rezerviraj = async () => {
   const bike = bikeSnap.data();
 
   if (bike.aktivan === false || bike.stanje === "nedostupan") {
-    greska.value = "Bicikl trenutno nije dostupan.";
+    greska.value = "Bicikl trenutno nije dostupan za rezervacije.";
     return;
   }
 
-  const rezervacijeSnap = await getDocs(collection(db, "rezervacije"));
-
-  let zauzeto = 0;
-
-  rezervacijeSnap.forEach((d) => {
-    const rezervacija = d.data();
-
-    if (
-      rezervacija.biciklId === bicikl.value.id &&
-      rezervacija.status !== "otkazana" &&
-      rezervacija.planiraniPocetak &&
-      rezervacija.planiraniKraj
-    ) {
-      const postojeciPocetak = rezervacija.planiraniPocetak.toDate();
-
-      const postojeciKraj = rezervacija.planiraniKraj.toDate();
-
-      const krajSTolerancijom = new Date(
-        postojeciKraj.getTime() + 15 * 60 * 1000,
-      );
-
-      if (postojeciPocetak < end && krajSTolerancijom > start) {
-        zauzeto++;
-      }
-    }
-  });
-
+  const zauzeto = await brojZauzetihUTerminu(start, end);
   const kolicina = Number(bike.kolicina || 1);
 
   if (zauzeto >= kolicina) {
+    dostupnoUTerminu.value = 0;
     greska.value = "Nema dostupnih bicikala u odabranom terminu.";
     return;
   }
@@ -281,21 +373,19 @@ onMounted(() => {
             style="width: 100%; height: 300px; object-fit: contain"
           />
 
-          <span v-else style="font-size: 120px"> 🚲 </span>
+          <span v-else style="font-size: 120px">🚲</span>
         </div>
 
         <div>
-          <span class="status">
-            {{ bicikl.stanje }}
+          <span
+            :class="['status', statusDostupnosti === 'nedostupan' ? 'red' : '']"
+          >
+            {{ statusDostupnosti }}
           </span>
 
-          <h1>
-            {{ bicikl.naziv }}
-          </h1>
+          <h1>{{ bicikl.naziv }}</h1>
 
-          <p>
-            {{ bicikl.opis }}
-          </p>
+          <p>{{ bicikl.opis }}</p>
 
           <p>
             <strong>Vrsta:</strong>
@@ -303,36 +393,47 @@ onMounted(() => {
           </p>
 
           <p>
-            <strong>Količina:</strong>
+            <strong>Ukupno bicikala:</strong>
             {{ bicikl.kolicina || 1 }}
+          </p>
+
+          <p v-if="trenutnoDostupno !== null">
+            <strong>Trenutno slobodno:</strong>
+            {{ trenutnoDostupno }}
           </p>
 
           <p>
             <strong>Cijena:</strong>
-            {{ Number(bicikl.cijenaPoSatu).toFixed(2) }}
-            €/sat
+            {{ Number(bicikl.cijenaPoSatu).toFixed(2) }} €/sat
           </p>
 
           <div class="form" style="margin-top: 22px">
             <div class="form-row">
-              <label> Planirani početak </label>
+              <label>Planirani početak</label>
 
               <input
                 type="datetime-local"
                 v-model="pocetak"
                 :min="minimalniDatum"
+                @change="provjeriTermin"
               />
             </div>
 
             <div class="form-row">
-              <label> Planirani kraj </label>
+              <label>Planirani kraj</label>
 
               <input
                 type="datetime-local"
                 v-model="kraj"
                 :min="minimalniDatum"
+                @change="provjeriTermin"
               />
             </div>
+
+            <p v-if="dostupnoUTerminu !== null">
+              <strong>Dostupno u odabranom terminu:</strong>
+              {{ dostupnoUTerminu }} od {{ bicikl.kolicina || 1 }}
+            </p>
 
             <div
               v-if="procijenjenaCijena !== null"
@@ -348,7 +449,9 @@ onMounted(() => {
             <button
               class="btn btn-primary"
               :disabled="
-                bicikl.aktivan === false || bicikl.stanje === 'nedostupan'
+                bicikl.aktivan === false ||
+                bicikl.stanje === 'nedostupan' ||
+                dostupnoUTerminu === 0
               "
               @click="rezerviraj"
             >
@@ -366,27 +469,25 @@ onMounted(() => {
     <div class="card" style="margin-top: 30px">
       <h2>⭐ Recenzije</h2>
 
-      <div v-if="recenzije.length === 0">
-        <p class="muted">Ovaj bicikl još nema recenzija.</p>
-      </div>
+      <p v-if="recenzije.length === 0" class="muted">
+        Ovaj bicikl još nema recenzija.
+      </p>
 
       <div
         v-for="r in recenzije"
         :key="r.id"
         style="padding: 15px 0; border-bottom: 1px solid #ddd"
       >
-        <strong>
-          {{ r.korisnikIme }}
-        </strong>
+        <strong>{{ r.korisnikIme }}</strong>
 
         <p>
           Ocjena:
-          <strong> {{ r.ocjena }}/5 ⭐ </strong>
+          <strong>
+            {{ "⭐".repeat(r.ocjena) }}{{ "☆".repeat(5 - r.ocjena) }}
+          </strong>
         </p>
 
-        <p>
-          {{ r.komentar }}
-        </p>
+        <p>{{ r.komentar }}</p>
       </div>
     </div>
 
@@ -399,13 +500,9 @@ onMounted(() => {
 
           <select v-model.number="ocjena">
             <option :value="5">5 - Odlično</option>
-
             <option :value="4">4 - Vrlo dobro</option>
-
             <option :value="3">3 - Dobro</option>
-
             <option :value="2">2 - Dovoljno</option>
-
             <option :value="1">1 - Loše</option>
           </select>
         </div>

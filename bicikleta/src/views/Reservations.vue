@@ -3,6 +3,8 @@ import { ref, onMounted } from "vue";
 import {
   collection,
   getDocs,
+  query,
+  where,
   doc,
   getDoc,
   addDoc,
@@ -15,6 +17,7 @@ const router = useRouter();
 
 const rezervacije = ref([]);
 const loading = ref(true);
+const pokretanjeId = ref(null);
 
 const nazivStatusa = (status) => {
   if (status === "aktivna") {
@@ -33,7 +36,33 @@ const nazivStatusa = (status) => {
     return "🔴 Otkazana";
   }
 
+  if (status === "istekla") {
+    return "⚪ Istekla";
+  }
+
   return status;
+};
+
+const poredajRezervacije = () => {
+  rezervacije.value.sort((a, b) => {
+    if (a.status === "u_tijeku" && b.status !== "u_tijeku") {
+      return -1;
+    }
+
+    if (b.status === "u_tijeku" && a.status !== "u_tijeku") {
+      return 1;
+    }
+
+    if (a.status === "aktivna" && b.status !== "aktivna") {
+      return -1;
+    }
+
+    if (b.status === "aktivna" && a.status !== "aktivna") {
+      return 1;
+    }
+
+    return b.planiraniPocetak.toDate() - a.planiraniPocetak.toDate();
+  });
 };
 
 const ucitaj = async () => {
@@ -45,44 +74,51 @@ const ucitaj = async () => {
     return;
   }
 
-  const snap = await getDocs(
-    collection(db, "rezervacije")
+  const q = query(
+    collection(db, "rezervacije"),
+    where("korisnikId", "==", auth.currentUser.uid),
   );
+
+  const snap = await getDocs(q);
+  const sada = new Date();
 
   for (const d of snap.docs) {
     const data = d.data();
 
     if (
-      data.korisnikId === auth.currentUser.uid
+      data.status === "aktivna" &&
+      data.planiraniKraj &&
+      sada > data.planiraniKraj.toDate()
     ) {
-      let nazivBicikla = data.biciklId;
-
-      const bikeSnap = await getDoc(
-        doc(db, "bicikli", data.biciklId)
-      );
-
-      if (bikeSnap.exists()) {
-        nazivBicikla =
-          bikeSnap.data().naziv;
-      }
-
-      rezervacije.value.push({
-        id: d.id,
-        nazivBicikla: nazivBicikla,
-        ...data,
+      await updateDoc(doc(db, "rezervacije", d.id), {
+        status: "istekla",
       });
+
+      data.status = "istekla";
     }
+
+    let nazivBicikla = data.biciklId;
+
+    const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));
+
+    if (bikeSnap.exists()) {
+      nazivBicikla = bikeSnap.data().naziv;
+    }
+
+    rezervacije.value.push({
+      id: d.id,
+      nazivBicikla,
+      ...data,
+    });
   }
+
+  poredajRezervacije();
 
   loading.value = false;
 };
 
 const otkazi = async (r) => {
-  const rezRef = doc(
-    db,
-    "rezervacije",
-    r.id
-  );
+  const rezRef = doc(db, "rezervacije", r.id);
 
   const rezSnap = await getDoc(rezRef);
 
@@ -104,110 +140,106 @@ const otkazi = async (r) => {
 };
 
 const zapocniNajam = async (r) => {
+  if (!auth.currentUser || pokretanjeId.value) {
+    return;
+  }
+
   const sada = new Date();
 
-  const planiraniPocetak =
-    r.planiraniPocetak.toDate();
+  const planiraniPocetak = r.planiraniPocetak.toDate();
 
-  const planiraniKraj =
-    r.planiraniKraj.toDate();
+  const planiraniKraj = r.planiraniKraj.toDate();
 
   if (sada < planiraniPocetak) {
-    alert(
-      "Najam još ne možeš započeti. Pričekaj početak rezervacije."
-    );
+    alert("Najam još ne možeš započeti. Pričekaj početak rezervacije.");
     return;
   }
 
   if (sada > planiraniKraj) {
-    alert(
-      "Vrijeme rezervacije je isteklo i najam se više ne može započeti."
-    );
+    alert("Vrijeme rezervacije je isteklo i najam se više ne može započeti.");
     return;
   }
 
-  const rezRef = doc(
-    db,
-    "rezervacije",
-    r.id
-  );
+  pokretanjeId.value = r.id;
 
-  const rezSnap = await getDoc(rezRef);
+  try {
+    const rezRef = doc(db, "rezervacije", r.id);
 
-  if (!rezSnap.exists()) {
-    alert("Rezervacija ne postoji.");
-    return;
-  }
+    const rezSnap = await getDoc(rezRef);
 
-  if (rezSnap.data().status !== "aktivna") {
-    alert("Rezervacija više nije aktivna.");
-    return;
-  }
+    if (!rezSnap.exists()) {
+      alert("Rezervacija ne postoji.");
+      return;
+    }
 
-  const bikeSnap = await getDoc(
-    doc(db, "bicikli", r.biciklId)
-  );
+    if (rezSnap.data().status !== "aktivna") {
+      alert("Rezervacija više nije aktivna.");
+      return;
+    }
 
-  if (!bikeSnap.exists()) {
-    alert("Bicikl ne postoji.");
-    return;
-  }
+    const bikeSnap = await getDoc(doc(db, "bicikli", r.biciklId));
 
-  const bike = bikeSnap.data();
+    if (!bikeSnap.exists()) {
+      alert("Bicikl ne postoji.");
+      return;
+    }
 
-  const noviNajam = await addDoc(
-    collection(db, "najmovi"),
-    {
+    const bike = bikeSnap.data();
+
+    const sveRezervacije = await getDocs(collection(db, "rezervacije"));
+
+    let trenutnoUNajmu = 0;
+
+    sveRezervacije.forEach((d) => {
+      const rezervacija = d.data();
+
+      if (
+        rezervacija.biciklId === r.biciklId &&
+        rezervacija.status === "u_tijeku"
+      ) {
+        trenutnoUNajmu++;
+      }
+    });
+
+    if (trenutnoUNajmu >= Number(bike.kolicina || 1)) {
+      alert("Trenutno nema slobodnog bicikla. Pokušaj ponovno malo kasnije.");
+      return;
+    }
+
+    const noviNajam = await addDoc(collection(db, "najmovi"), {
       korisnikId: auth.currentUser.uid,
       biciklId: r.biciklId,
       rezervacijaId: r.id,
-
-      vrijemePocetka:
-        r.planiraniPocetak,
-
-      planiraniKraj:
-        r.planiraniKraj,
-
+      vrijemePocetka: r.planiraniPocetak,
+      planiraniKraj: r.planiraniKraj,
       vrijemeZavrsetka: null,
       trajanjeMinuta: null,
-
-      cijenaPoSatu:
-        bike.cijenaPoSatu,
-
+      cijenaPoSatu: bike.cijenaPoSatu,
       ukupnaCijena: null,
-
       status: "aktivan",
-    }
-  );
+    });
 
-  await updateDoc(rezRef, {
-    status: "u_tijeku",
-  });
+    await updateDoc(rezRef, {
+      status: "u_tijeku",
+    });
 
-  router.push(
-    `/najam/${noviNajam.id}`
-  );
+    router.push("/najam/" + noviNajam.id);
+  } finally {
+    pokretanjeId.value = null;
+  }
 };
 
-onMounted(() => {
-  ucitaj();
-});
+onMounted(ucitaj);
 </script>
 
 <template>
   <section>
     <h1>Moje rezervacije</h1>
 
-    <p v-if="loading">
-      Učitavanje...
-    </p>
+    <p v-if="loading">Učitavanje...</p>
 
     <div v-else class="grid">
-      <div
-        v-for="r in rezervacije"
-        :key="r.id"
-        class="card"
-      >
+      <div v-for="r in rezervacije" :key="r.id" class="card">
         <h3>
           {{ r.nazivBicikla }}
         </h3>
@@ -221,32 +253,21 @@ onMounted(() => {
 
         <p v-if="r.planiraniPocetak">
           Početak:
-          {{
-            r.planiraniPocetak
-              .toDate()
-              .toLocaleString("hr-HR")
-          }}
+          {{ r.planiraniPocetak.toDate().toLocaleString("hr-HR") }}
         </p>
 
         <p v-if="r.planiraniKraj">
           Kraj:
-          {{
-            r.planiraniKraj
-              .toDate()
-              .toLocaleString("hr-HR")
-          }}
+          {{ r.planiraniKraj.toDate().toLocaleString("hr-HR") }}
         </p>
 
         <div
           v-if="r.status === 'aktivna'"
-          style="
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-          "
+          style="display: flex; gap: 10px; flex-wrap: wrap"
         >
           <button
             class="btn btn-primary"
+            :disabled="pokretanjeId !== null"
             @click="zapocniNajam(r)"
           >
             Započni najam
@@ -254,26 +275,19 @@ onMounted(() => {
 
           <button
             class="btn btn-danger"
+            :disabled="pokretanjeId !== null"
             @click="otkazi(r)"
           >
             Otkaži
           </button>
         </div>
 
-        <p
-          v-if="r.status === 'u_tijeku'"
-          class="muted"
-        >
+        <p v-if="r.status === 'u_tijeku'" class="muted">
           🚲 Bicikl je trenutno u najmu.
         </p>
       </div>
 
-      <p
-        v-if="rezervacije.length === 0"
-        class="muted"
-      >
-        Nemaš rezervacija.
-      </p>
+      <p v-if="rezervacije.length === 0" class="muted">Nemaš rezervacija.</p>
     </div>
   </section>
 </template>

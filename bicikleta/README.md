@@ -1,38 +1,60 @@
-# bicikleta
+# Bičikleta
 
-This template should help get you started developing with Vue 3 in Vite.
+Bičikleta je web aplikacija za rezervaciju i najam bicikala na području Pule. Projekt je izrađen u Vue 3 i koristi Firebase Authentication za prijavu korisnika te Cloud Firestore za spremanje podataka.
 
-## Recommended IDE Setup
+## Glavne funkcionalnosti
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+### Korisnik
 
-## Recommended Browser Setup
+- registracija i prijava
+- pregled i filtriranje bicikala
+- pregled detalja bicikla
+- provjera dostupnosti za odabrani termin
+- rezervacija bicikla
+- otkazivanje aktivne rezervacije
+- pokretanje najma u rezerviranom terminu
+- prikaz trajanja i trenutne cijene najma
+- završavanje najma
+- pregled vlastitih rezervacija i najmova
+- uređivanje profila
+- dodavanje recenzije nakon završenog najma
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+### Administrator
 
-## Customize configuration
+- pregled ukupnog broja bicikala, korisnika, aktivnih rezervacija i najmova
+- pregled ukupne zarade
+- dodavanje i uređivanje bicikala
+- upravljanje količinom bicikala
+- aktiviranje i deaktiviranje modela bicikla
+- blokiranje i aktiviranje korisnika
+- pregled svih rezervacija i najmova
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Tehnologije
 
-## Project Setup
+- Vue 3
+- Vue Router
+- Firebase Authentication
+- Cloud Firestore
 
-```sh
+## Firestore kolekcije
+
+- `korisnici`
+- `bicikli`
+- `rezervacije`
+- `najmovi`
+- `recenzije`
+
+## Firebase
+
+Firebase Authentication koristi se za registraciju i prijavu korisnika.
+
+Cloud Firestore koristi se za spremanje podataka o korisnicima, biciklima, rezervacijama, najmovima i recenzijama.
+
+Sigurnosna pravila Firestore baze postavljena su izravno u Firebase Console.
+
+## Pokretanje projekta
+
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
 ```

@@ -1,11 +1,12 @@
 <script setup>
 import { ref } from "vue";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
+
 const email = ref("");
 const lozinka = ref("");
 const greska = ref("");
@@ -19,14 +20,24 @@ const prijavi = async () => {
       email.value,
       lozinka.value,
     );
+
     const userDoc = await getDoc(doc(db, "korisnici", result.user.uid));
 
-    if (userDoc.exists() && userDoc.data().status === "blokiran") {
+    if (!userDoc.exists()) {
+      await signOut(auth);
+      greska.value = "Korisnički profil ne postoji.";
+      return;
+    }
+
+    const korisnik = userDoc.data();
+
+    if (korisnik.status === "blokiran") {
+      await signOut(auth);
       greska.value = "Ovaj korisnički račun je blokiran.";
       return;
     }
 
-    if (userDoc.exists() && userDoc.data().uloga === "admin") {
+    if (korisnik.uloga === "admin") {
       router.push("/admin");
     } else {
       router.push("/bicikli");

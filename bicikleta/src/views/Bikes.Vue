@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../firebase/firebase";
+import { db, auth } from "../firebase/firebase";
 import BikeCard from "../components/BikeCard.vue";
 
 const bicikli = ref([]);
@@ -11,12 +11,78 @@ const vrsta = ref("");
 const ucitaj = async () => {
   const q = query(collection(db, "bicikli"), where("aktivan", "==", true));
 
-  const snap = await getDocs(q);
+  const bicikliSnap = await getDocs(q);
+  let rezervacijeSnap = null;
 
-  bicikli.value = snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-  }));
+  if (auth.currentUser) {
+    rezervacijeSnap = await getDocs(collection(db, "rezervacije"));
+  }
+
+  const lista = [];
+  const sada = new Date();
+
+  for (const d of bicikliSnap.docs) {
+    const bike = {
+      id: d.id,
+      ...d.data(),
+    };
+
+    let trenutnoDostupno = null;
+    let statusPrikaz = bike.stanje || "dostupan";
+
+    if (rezervacijeSnap) {
+      let zauzeto = 0;
+
+      rezervacijeSnap.forEach((r) => {
+        const rezervacija = r.data();
+
+        if (rezervacija.biciklId !== bike.id) {
+          return;
+        }
+
+        if (rezervacija.status === "u_tijeku") {
+          zauzeto++;
+          return;
+        }
+
+        if (
+          rezervacija.status === "aktivna" &&
+          rezervacija.planiraniPocetak &&
+          rezervacija.planiraniKraj
+        ) {
+          const pocetak = rezervacija.planiraniPocetak.toDate();
+          const kraj = rezervacija.planiraniKraj.toDate();
+          const krajSTolerancijom = new Date(kraj.getTime() + 15 * 60 * 1000);
+
+          if (pocetak <= sada && krajSTolerancijom > sada) {
+            zauzeto++;
+          }
+        }
+      });
+
+      trenutnoDostupno = Number(bike.kolicina || 1) - zauzeto;
+
+      if (trenutnoDostupno < 0) {
+        trenutnoDostupno = 0;
+      }
+
+      if (trenutnoDostupno === 0) {
+        statusPrikaz = "nedostupan";
+      }
+    }
+
+    if (bike.stanje === "nedostupan") {
+      statusPrikaz = "nedostupan";
+    }
+
+    lista.push({
+      ...bike,
+      trenutnoDostupno,
+      statusPrikaz,
+    });
+  }
+
+  bicikli.value = lista;
 };
 
 const filtrirani = computed(() => {
@@ -76,6 +142,7 @@ onMounted(ucitaj);
     </p>
   </section>
 </template>
+
 <style scoped>
 .bikes-grid {
   display: grid;

@@ -12,8 +12,36 @@ import { db, auth } from "../firebase/firebase";
 
 const najmovi = ref([]);
 
+const nazivStatusa = (status) => {
+  if (status === "aktivan") {
+    return "🔵 Aktivan";
+  }
+
+  if (status === "zavrsen") {
+    return "✅ Završen";
+  }
+
+  return status;
+};
+
+const poredajNajmove = () => {
+  najmovi.value.sort((a, b) => {
+    if (a.status === "aktivan" && b.status !== "aktivan") {
+      return -1;
+    }
+
+    if (b.status === "aktivan" && a.status !== "aktivan") {
+      return 1;
+    }
+
+    return b.vrijemePocetka.toDate() - a.vrijemePocetka.toDate();
+  });
+};
+
 const ucitaj = async () => {
-  if (!auth.currentUser) return;
+  if (!auth.currentUser) {
+    return;
+  }
 
   const q = query(
     collection(db, "najmovi"),
@@ -25,14 +53,25 @@ const ucitaj = async () => {
 
   for (const d of snap.docs) {
     const data = d.data();
-    let naziv = data.biciklId;
-    const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));
-    if (bikeSnap.exists()) naziv = bikeSnap.data().naziv;
 
-    list.push({ id: d.id, nazivBicikla: naziv, ...data });
+    let nazivBicikla = data.biciklId;
+
+    const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));
+
+    if (bikeSnap.exists()) {
+      nazivBicikla = bikeSnap.data().naziv;
+    }
+
+    list.push({
+      id: d.id,
+      nazivBicikla,
+      ...data,
+    });
   }
 
   najmovi.value = list;
+
+  poredajNajmove();
 };
 
 onMounted(ucitaj);
@@ -44,24 +83,42 @@ onMounted(ucitaj);
 
     <div class="grid">
       <article v-for="n in najmovi" :key="n.id" class="card">
-        <h3>{{ n.nazivBicikla }}</h3>
+        <h3>
+          {{ n.nazivBicikla }}
+        </h3>
+
         <p>
-          Status: <span class="status">{{ n.status }}</span>
+          Status:
+          <strong>
+            {{ nazivStatusa(n.status) }}
+          </strong>
         </p>
 
         <p v-if="n.vrijemePocetka">
-          Početak: {{ n.vrijemePocetka.toDate().toLocaleString("hr-HR") }}
+          Početak:
+          {{ n.vrijemePocetka.toDate().toLocaleString("hr-HR") }}
         </p>
 
         <template v-if="n.status === 'zavrsen'">
-          <p>Trajanje: {{ n.trajanjeMinuta }} min</p>
+          <p>
+            Trajanje:
+            {{ n.trajanjeMinuta }} min
+          </p>
+
           <p>
             Ukupna cijena:
-            <strong>{{ Number(n.ukupnaCijena).toFixed(2) }} €</strong>
+            <strong>
+              {{ Number(n.ukupnaCijena).toFixed(2) }}
+              €
+            </strong>
           </p>
         </template>
 
-        <router-link v-else class="btn btn-primary" :to="`/najam/${n.id}`">
+        <router-link
+          v-if="n.status === 'aktivan'"
+          class="btn btn-primary"
+          :to="'/najam/' + n.id"
+        >
           Otvori aktivni najam
         </router-link>
       </article>

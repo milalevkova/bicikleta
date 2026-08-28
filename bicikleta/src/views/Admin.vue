@@ -70,13 +70,54 @@ const provjeriAdmina = async () => {
   await ucitajSve();
 };
 
+const poredajRezervacije = () => {
+  rezervacije.value.sort((a, b) => {
+    if (a.status === "u_tijeku" && b.status !== "u_tijeku") {
+      return -1;
+    }
+
+    if (b.status === "u_tijeku" && a.status !== "u_tijeku") {
+      return 1;
+    }
+
+    if (a.status === "aktivna" && b.status !== "aktivna") {
+      return -1;
+    }
+
+    if (b.status === "aktivna" && a.status !== "aktivna") {
+      return 1;
+    }
+
+    if (a.planiraniPocetak && b.planiraniPocetak) {
+      return b.planiraniPocetak.toDate() - a.planiraniPocetak.toDate();
+    }
+
+    return 0;
+  });
+};
+
+const poredajNajmove = () => {
+  najmovi.value.sort((a, b) => {
+    if (a.status === "aktivan" && b.status !== "aktivan") {
+      return -1;
+    }
+
+    if (b.status === "aktivan" && a.status !== "aktivan") {
+      return 1;
+    }
+
+    if (a.vrijemePocetka && b.vrijemePocetka) {
+      return b.vrijemePocetka.toDate() - a.vrijemePocetka.toDate();
+    }
+
+    return 0;
+  });
+};
+
 const ucitajSve = async () => {
   const bicikliSnap = await getDocs(collection(db, "bicikli"));
-
   const korisniciSnap = await getDocs(collection(db, "korisnici"));
-
   const rezervacijeSnap = await getDocs(collection(db, "rezervacije"));
-
   const najmoviSnap = await getDocs(collection(db, "najmovi"));
 
   bicikli.value = [];
@@ -111,6 +152,9 @@ const ucitajSve = async () => {
       ...d.data(),
     });
   });
+
+  poredajRezervacije();
+  poredajNajmove();
 };
 
 const dodajBicikl = async () => {
@@ -223,7 +267,11 @@ const dohvatiKorisnika = (id) => {
     return id;
   }
 
-  return korisnik.ime + " " + korisnik.prezime;
+  if (korisnik.ime && korisnik.prezime) {
+    return korisnik.ime + " " + korisnik.prezime;
+  }
+
+  return korisnik.email;
 };
 
 const dohvatiBicikl = (id) => {
@@ -269,8 +317,13 @@ const brojAktivnihNajmova = () => {
 const brojAktivnihRezervacija = () => {
   let broj = 0;
 
+  const sada = new Date();
+
   for (const r of rezervacije.value) {
-    if (r.status === "aktivna") {
+    if (
+      r.status === "aktivna" &&
+      (!r.planiraniKraj || r.planiraniKraj.toDate() > sada)
+    ) {
       broj++;
     }
   }
@@ -299,36 +352,51 @@ onMounted(() => {
   <section v-if="dozvoljen">
     <h1>Administracija</h1>
 
-    <div class="grid grid-3" style="margin-bottom: 26px">
+    <div
+      style="
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 20px;
+        margin-bottom: 26px;
+      "
+    >
       <div class="card">
-        <strong>{{ brojBicikala() }}</strong>
+        <strong>
+          {{ brojBicikala() }}
+        </strong>
         <p>Bicikala</p>
       </div>
 
       <div class="card">
-        <strong>{{ korisnici.length }}</strong>
+        <strong>
+          {{ korisnici.length }}
+        </strong>
         <p>Korisnika</p>
       </div>
 
       <div class="card">
-        <strong>{{ brojAktivnihNajmova() }}</strong>
+        <strong>
+          {{ brojAktivnihNajmova() }}
+        </strong>
         <p>Aktivnih najmova</p>
       </div>
 
       <div class="card">
-        <strong>{{ brojAktivnihRezervacija() }}</strong>
+        <strong>
+          {{ brojAktivnihRezervacija() }}
+        </strong>
         <p>Aktivnih rezervacija</p>
       </div>
 
       <div class="card">
-        <strong>{{ ukupnaZarada() }} €</strong>
+        <strong> {{ ukupnaZarada() }} € </strong>
         <p>Ukupna zarada</p>
       </div>
     </div>
 
-    <h2>Dodaj bicikl</h2>
+    <div class="card form" style="max-width: 650px; margin: 0 auto 30px auto">
+      <h2>Dodaj bicikl</h2>
 
-    <div class="card form" style="margin-bottom: 30px">
       <div class="form-row">
         <label>Naziv</label>
         <input v-model="noviBicikl.naziv" />
@@ -344,10 +412,15 @@ onMounted(() => {
 
         <select v-model="noviBicikl.vrsta">
           <option value="gradski">Gradski</option>
+
           <option value="elektricni">Električni</option>
+
           <option value="brdski">Brdski</option>
+
           <option value="trekking">Trekking</option>
+
           <option value="djecji">Dječji</option>
+
           <option value="tandem">Tandem</option>
         </select>
       </div>
@@ -398,9 +471,13 @@ onMounted(() => {
             <td>{{ b.naziv }}</td>
             <td>{{ b.vrsta }}</td>
             <td>{{ b.cijenaPoSatu }} €</td>
-            <td>{{ b.kolicina || 1 }}</td>
+            <td>
+              {{ b.kolicina || 1 }}
+            </td>
             <td>{{ b.stanje }}</td>
-            <td>{{ b.aktivan ? "DA" : "NE" }}</td>
+            <td>
+              {{ b.aktivan ? "DA" : "NE" }}
+            </td>
 
             <td>
               <button class="btn btn-primary" @click="urediBicikl(b)">
@@ -437,10 +514,15 @@ onMounted(() => {
 
         <select v-model="uredjeniBicikl.vrsta">
           <option value="gradski">Gradski</option>
+
           <option value="elektricni">Električni</option>
+
           <option value="brdski">Brdski</option>
+
           <option value="trekking">Trekking</option>
+
           <option value="djecji">Dječji</option>
+
           <option value="tandem">Tandem</option>
         </select>
       </div>
@@ -471,6 +553,7 @@ onMounted(() => {
 
         <select v-model="uredjeniBicikl.stanje">
           <option value="dostupan">Dostupan</option>
+
           <option value="nedostupan">Nedostupan</option>
         </select>
       </div>
@@ -505,10 +588,22 @@ onMounted(() => {
 
         <tbody>
           <tr v-for="k in korisnici" :key="k.id">
-            <td>{{ k.ime }} {{ k.prezime }}</td>
-            <td>{{ k.email }}</td>
-            <td>{{ k.uloga }}</td>
-            <td>{{ k.status }}</td>
+            <td>
+              {{ k.ime }}
+              {{ k.prezime }}
+            </td>
+
+            <td>
+              {{ k.email }}
+            </td>
+
+            <td>
+              {{ k.uloga }}
+            </td>
+
+            <td>
+              {{ k.status }}
+            </td>
 
             <td>
               <button
@@ -607,7 +702,8 @@ onMounted(() => {
 
             <td>
               <span v-if="n.ukupnaCijena != null">
-                {{ Number(n.ukupnaCijena).toFixed(2) }} €
+                {{ Number(n.ukupnaCijena).toFixed(2) }}
+                €
               </span>
 
               <span v-else> - </span>

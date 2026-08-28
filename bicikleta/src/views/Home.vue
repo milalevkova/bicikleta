@@ -1,40 +1,46 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-
 import { onAuthStateChanged, signOut } from "firebase/auth";
-
-import { doc, getDoc } from "firebase/firestore";
-
+import { collection, getDocs } from "firebase/firestore";
 import { useRouter } from "vue-router";
-
 import Bicikleta from "../components/Bicikleta.vue";
-
 import bikeHero from "../assets/bike-hero.png";
-
 import { auth, db } from "../firebase/firebase";
 
 const user = ref(null);
-
-const uloga = ref(null);
-
+const brojBicikala = ref(0);
+const brojVrsta = ref(0);
 const router = useRouter();
 
 let stopAuth;
 
-onMounted(() => {
-  stopAuth = onAuthStateChanged(auth, async (currentUser) => {
-    user.value = currentUser;
+const ucitajPonudu = async () => {
+  const snap = await getDocs(collection(db, "bicikli"));
+  const vrste = [];
+  let ukupno = 0;
 
-    uloga.value = null;
+  snap.forEach((d) => {
+    const bicikl = d.data();
 
-    if (currentUser) {
-      const snap = await getDoc(doc(db, "korisnici", currentUser.uid));
+    if (bicikl.aktivan !== false) {
+      ukupno = ukupno + Number(bicikl.kolicina || 1);
 
-      if (snap.exists()) {
-        uloga.value = snap.data().uloga;
+      if (bicikl.vrsta && !vrste.includes(bicikl.vrsta)) {
+        vrste.push(bicikl.vrsta);
       }
     }
   });
+
+  brojBicikala.value = ukupno;
+  brojVrsta.value = vrste.length;
+};
+
+onMounted(() => {
+  stopAuth = onAuthStateChanged(auth, (currentUser) => {
+    user.value = currentUser;
+  });
+
+  ucitajPonudu();
 });
 
 onUnmounted(() => {
@@ -45,17 +51,12 @@ onUnmounted(() => {
 
 const odjava = async () => {
   await signOut(auth);
-
   router.push("/");
 };
 </script>
 
 <template>
-  <!-- GLAVNI BIČIKLETA LOGO -->
-
   <Bicikleta />
-
-  <!-- HERO -->
 
   <section class="hero-new">
     <div class="hero-left">
@@ -71,36 +72,32 @@ const odjava = async () => {
         klikova i istraži grad svojim tempom.
       </p>
 
-      <!-- GUMBI -->
-
       <div class="hero-actions">
         <router-link to="/bicikli" class="btn btn-primary hero-main-button">
           🚲 Pronađi bicikl
         </router-link>
 
-        <!-- NIJE PRIJAVLJEN -->
+        <!-- nije prijavljen -->
 
         <router-link v-if="!user" to="/prijava" class="btn hero-login-button">
           🔑 Prijavi se
         </router-link>
 
-        <!-- PRIJAVLJEN JE -->
+        <!-- prijavljen je -->
 
         <button v-else class="btn hero-logout-button" @click="odjava">
           🚪 Odjava
         </button>
       </div>
 
-      <!-- ČINJENICE -->
-
       <div class="hero-facts">
         <div>
-          <strong>105</strong>
+          <strong>{{ brojBicikala }}</strong>
           <span>bicikala</span>
         </div>
 
         <div>
-          <strong>6</strong>
+          <strong>{{ brojVrsta }}</strong>
           <span>vrsta bicikala</span>
         </div>
 
@@ -110,8 +107,6 @@ const odjava = async () => {
         </div>
       </div>
     </div>
-
-    <!-- BICIKL -->
 
     <div class="hero-bike-area">
       <div class="bike-circle"></div>
@@ -123,8 +118,6 @@ const odjava = async () => {
       <div class="floating-tag tag-location">📍 Pula</div>
     </div>
   </section>
-
-  <!-- ZAŠTO BIČIKLETA -->
 
   <section class="why-section">
     <div class="section-heading center-heading">
@@ -140,8 +133,6 @@ const odjava = async () => {
     </div>
 
     <div class="grid grid-3">
-      <!-- 01 -->
-
       <article class="feature-special green-feature">
         <div class="feature-number">01</div>
 
@@ -152,8 +143,6 @@ const odjava = async () => {
         <p>Odaberi bicikl, rezerviraj termin i spreman si za vožnju.</p>
       </article>
 
-      <!-- 02 -->
-
       <article class="feature-special brown-feature">
         <div class="feature-number">02</div>
 
@@ -163,8 +152,6 @@ const odjava = async () => {
 
         <p>Arena, Veruda, Lungomare ili centar — ti biraš svoj put.</p>
       </article>
-
-      <!-- 03 -->
 
       <article class="feature-special red-feature">
         <div class="feature-number">03</div>
@@ -177,8 +164,6 @@ const odjava = async () => {
       </article>
     </div>
   </section>
-
-  <!-- PULA -->
 
   <section class="pula-banner">
     <div class="pula-banner-text">
@@ -203,8 +188,6 @@ const odjava = async () => {
     <div class="banner-bike">BIČIKLETA</div>
   </section>
 
-  <!-- KAKO FUNKCIONIRA -->
-
   <section class="how-section">
     <div class="section-heading center-heading">
       <span class="eyebrow"> KAKO FUNKCIONIRA? </span>
@@ -215,8 +198,6 @@ const odjava = async () => {
     </div>
 
     <div class="steps-line">
-      <!-- 1 -->
-
       <div class="new-step">
         <span>01</span>
 
@@ -231,8 +212,6 @@ const odjava = async () => {
 
       <div class="step-arrow">→</div>
 
-      <!-- 2 -->
-
       <div class="new-step">
         <span>02</span>
 
@@ -244,8 +223,6 @@ const odjava = async () => {
       </div>
 
       <div class="step-arrow">→</div>
-
-      <!-- 3 -->
 
       <div class="new-step">
         <span>03</span>
@@ -259,8 +236,6 @@ const odjava = async () => {
 
       <div class="step-arrow">→</div>
 
-      <!-- 4 -->
-
       <div class="new-step">
         <span>04</span>
 
@@ -272,4 +247,269 @@ const odjava = async () => {
       </div>
     </div>
   </section>
+  <section class="kontakt">
+    <div class="kontakt-ukras kontakt-ukras-1"></div>
+    <div class="kontakt-ukras kontakt-ukras-2"></div>
+
+    <div class="kontakt-unutra">
+      <div class="kontakt-naslov">
+        <span class="kontakt-eyebrow">OSTANIMO U KONTAKTU</span>
+
+        <h2>
+          Imaš pitanje?
+          <span>Javi nam se.</span>
+        </h2>
+
+        <p>
+          Tu smo za sva pitanja vezana uz rezervaciju, najam i korištenje
+          Bičiklete.
+        </p>
+      </div>
+
+      <div class="kontakt-grid">
+        <div class="kontakt-kartica">
+          <div class="kontakt-ikona">🚲</div>
+
+          <h3>Bičikleta</h3>
+
+          <p>Jednostavan i brz način za rezervaciju i najam bicikala u Puli.</p>
+        </div>
+
+        <div class="kontakt-kartica">
+          <div class="kontakt-ikona">💬</div>
+
+          <h3>Kontakt</h3>
+
+          <p>📧 bicikleta@gmail.com</p>
+          <p>📞 +385 91 123 4567</p>
+          <p>📍 Pula, Hrvatska</p>
+        </div>
+
+        <div class="kontakt-kartica">
+          <div class="kontakt-ikona">🔗</div>
+
+          <h3>Brzi linkovi</h3>
+
+          <router-link to="/">Početna</router-link>
+          <router-link to="/bicikli">Bicikli</router-link>
+          <router-link to="/prijava">Prijava</router-link>
+          <router-link to="/registracija">Registracija</router-link>
+        </div>
+
+        <div class="kontakt-kartica">
+          <div class="kontakt-ikona">📱</div>
+
+          <h3>Pratite nas</h3>
+
+          <p>📷 Instagram: @bicikleta.pula</p>
+          <p>🎵 TikTok: @bicikleta.pula</p>
+        </div>
+      </div>
+
+      <div class="kontakt-dno">
+        <span>🚲 BIČIKLETA</span>
+
+        <p>© 2026 Bičikleta. Sva prava pridržana.</p>
+      </div>
+    </div>
+  </section>
 </template>
+
+<style scoped>
+.kontakt {
+  position: relative;
+  overflow: hidden;
+  margin-top: 80px;
+  padding: 75px 35px 25px;
+  background: linear-gradient(135deg, #203d2f 0%, #315c45 55%, #3e7657 100%);
+  color: white;
+  border-radius: 45px 45px 0 0;
+}
+
+.kontakt-unutra {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.kontakt-naslov {
+  max-width: 650px;
+  margin-bottom: 45px;
+}
+
+.kontakt-eyebrow {
+  display: inline-block;
+  margin-bottom: 15px;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #bfe2c8;
+}
+
+.kontakt-naslov h2 {
+  margin: 0;
+  font-size: 48px;
+  line-height: 1.05;
+  color: white;
+}
+
+.kontakt-naslov h2 span {
+  display: block;
+  color: #a8d7b5;
+}
+
+.kontakt-naslov p {
+  max-width: 550px;
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.kontakt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.kontakt-kartica {
+  min-height: 220px;
+  padding: 25px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  transition:
+    transform 0.3s ease,
+    background 0.3s ease;
+}
+
+.kontakt-kartica:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.kontakt-ikona {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+}
+
+.kontakt-kartica h3 {
+  margin: 0 0 14px;
+  color: white;
+  font-size: 20px;
+}
+
+.kontakt-kartica p {
+  margin: 8px 0;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.kontakt-kartica a {
+  display: block;
+  margin: 9px 0;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+.kontakt-kartica a:hover {
+  color: white;
+  transform: translateX(4px);
+}
+
+.kontakt-kartica .kontakt-gumb {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  background: white;
+  color: #315c45;
+  font-weight: bold;
+}
+
+.kontakt-kartica .kontakt-gumb:hover {
+  color: #315c45;
+  transform: translateY(-2px);
+}
+
+.kontakt-dno {
+  margin-top: 45px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kontakt-dno span {
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.kontakt-dno p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.kontakt-ukras {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kontakt-ukras-1 {
+  width: 350px;
+  height: 350px;
+  top: -180px;
+  right: -80px;
+}
+
+.kontakt-ukras-2 {
+  width: 230px;
+  height: 230px;
+  bottom: -130px;
+  left: -70px;
+}
+
+@media (max-width: 950px) {
+  .kontakt-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kontakt-naslov h2 {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .kontakt {
+    padding: 55px 20px 25px;
+    border-radius: 30px 30px 0 0;
+  }
+
+  .kontakt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kontakt-naslov h2 {
+    font-size: 34px;
+  }
+
+  .kontakt-dno {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+}
+</style>
