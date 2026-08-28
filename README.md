@@ -111,6 +111,7 @@ Korisnik može koristiti funkcionalnosti vezane uz rezervaciju i najam bicikla.
 - pratiti trenutnu cijenu najma
 - završiti najam
 - pregledavati svoje prethodne najmove
+- ostaviti recenziju i ocjenu bicikla nakon završenog najma
 - odjaviti se iz aplikacije
 
 Kada je korisnik prijavljen, njegova navigacija izgleda ovako:
@@ -228,6 +229,23 @@ Korisnik svoje najmove može pregledavati u dijelu **Moji najmovi**.
 
 ---
 
+# Recenzije
+
+Nakon završenog najma korisnik može ostaviti recenziju za bicikl koji je koristio.
+
+Recenzija sadrži:
+
+- ocjenu od 1 do 5 zvjezdica
+- komentar korisnika
+- podatak o korisniku koji je ostavio recenziju
+- bicikl na koji se recenzija odnosi
+
+Korisnik može ostaviti recenziju samo ako je prethodno završio najam tog bicikla.
+
+Recenzije se prikazuju na stranici s detaljima bicikla kako bi ih mogli vidjeti i drugi korisnici.
+
+---
+
 # Registracija i prijava
 
 Za registraciju i prijavu koristi se **Firebase Authentication**.
@@ -279,6 +297,10 @@ Sadrži rezervacije koje su korisnici napravili.
 ### `najmovi`
 
 Sadrži podatke o aktivnim i završenim najmovima bicikala.
+
+### `recenzije`
+
+Sadrži ocjene i komentare korisnika za bicikle nakon završenog najma.
 
 ---
 
