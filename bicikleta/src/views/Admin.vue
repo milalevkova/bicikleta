@@ -22,6 +22,7 @@ const rezervacije = ref([]);
 const najmovi = ref([]);
 
 const uredjujemId = ref(null);
+const greskaBicikl = ref("");
 
 const noviBicikl = ref({
   naziv: "",
@@ -158,6 +159,28 @@ const ucitajSve = async () => {
 };
 
 const dodajBicikl = async () => {
+  greskaBicikl.value = "";
+
+  if (noviBicikl.value.naziv.trim() === "") {
+    greskaBicikl.value = "Unesi naziv bicikla.";
+    return;
+  }
+
+  if (
+    noviBicikl.value.cijenaPoSatu === "" ||
+    Number(noviBicikl.value.cijenaPoSatu) < 0
+  ) {
+    greskaBicikl.value = "Cijena nije ispravna.";
+    return;
+  }
+
+  if (
+    noviBicikl.value.kolicina === "" ||
+    Number(noviBicikl.value.kolicina) < 1
+  ) {
+    greskaBicikl.value = "Količina mora biti najmanje 1.";
+    return;
+  }
   await addDoc(collection(db, "bicikli"), {
     naziv: noviBicikl.value.naziv,
     oznaka: noviBicikl.value.oznaka,
@@ -183,10 +206,14 @@ const dodajBicikl = async () => {
     kolicina: 1,
   };
 
+  greskaBicikl.value = "";
+
   await ucitajSve();
 };
 
 const urediBicikl = (b) => {
+  greskaBicikl.value = "";
+
   uredjujemId.value = b.id;
 
   uredjeniBicikl.value = {
@@ -203,6 +230,28 @@ const urediBicikl = (b) => {
 };
 
 const spremiPromjene = async () => {
+  greskaBicikl.value = "";
+
+  if (uredjeniBicikl.value.naziv.trim() === "") {
+    greskaBicikl.value = "Unesi naziv bicikla.";
+    return;
+  }
+
+  if (
+    uredjeniBicikl.value.cijenaPoSatu === "" ||
+    Number(uredjeniBicikl.value.cijenaPoSatu) < 0
+  ) {
+    greskaBicikl.value = "Cijena nije ispravna.";
+    return;
+  }
+
+  if (
+    uredjeniBicikl.value.kolicina === "" ||
+    Number(uredjeniBicikl.value.kolicina) < 1
+  ) {
+    greskaBicikl.value = "Količina mora biti najmanje 1.";
+    return;
+  }
   await updateDoc(doc(db, "bicikli", uredjujemId.value), {
     naziv: uredjeniBicikl.value.naziv,
     oznaka: uredjeniBicikl.value.oznaka,
@@ -222,6 +271,7 @@ const spremiPromjene = async () => {
 
 const odustaniOdUredjivanja = () => {
   uredjujemId.value = null;
+  greskaBicikl.value = "";
 };
 
 const promijeniAktivnostBicikla = async (b) => {
@@ -320,11 +370,20 @@ const brojAktivnihRezervacija = () => {
   const sada = new Date();
 
   for (const r of rezervacije.value) {
-    if (
-      r.status === "aktivna" &&
-      (!r.planiraniKraj || r.planiraniKraj.toDate() > sada)
-    ) {
-      broj++;
+    if (r.status === "aktivna") {
+      if (!r.planiraniKraj) {
+        broj++;
+        continue;
+      }
+
+      const kraj = r.planiraniKraj.toDate();
+      const krajSTolerancijom = new Date(
+        kraj.getTime() + 15 * 60 * 1000
+      );
+
+      if (krajSTolerancijom > sada) {
+        broj++;
+      }
     }
   }
 
@@ -396,6 +455,10 @@ onMounted(() => {
 
     <div class="card form" style="max-width: 650px; margin: 0 auto 30px auto">
       <h2>Dodaj bicikl</h2>
+
+      <p v-if="greskaBicikl" class="notice error">
+        {{ greskaBicikl }}
+      </p>
 
       <div class="form-row">
         <label>Naziv</label>
@@ -498,6 +561,9 @@ onMounted(() => {
 
     <div v-if="uredjujemId" class="card form" style="margin-top: 25px">
       <h2>Uredi bicikl</h2>
+      <p v-if="greskaBicikl" class="notice error">
+        {{ greskaBicikl }}
+      </p>
 
       <div class="form-row">
         <label>Naziv</label>

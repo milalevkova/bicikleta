@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -30,6 +31,14 @@ const ocjena = ref(5);
 const komentar = ref("");
 const mozeRecenzirati = ref(false);
 const porukaRecenzija = ref("");
+const getCurrentUser = () => {
+  return new Promise((resolve) => {
+    const stop = onAuthStateChanged(auth, (user) => {
+      stop();
+      resolve(user);
+    });
+  });
+};
 
 const ucitajDostupnost = async () => {
   if (!bicikl.value || !auth.currentUser) {
@@ -336,10 +345,12 @@ const rezerviraj = async () => {
   router.push("/rezervacije");
 };
 
-onMounted(() => {
-  ucitaj();
-  ucitajRecenzije();
-  provjeriMozeLiRecenzirati();
+onMounted(async () => {
+  await getCurrentUser();
+
+  await ucitaj();
+  await ucitajRecenzije();
+  await provjeriMozeLiRecenzirati();
 
   const sada = new Date();
 

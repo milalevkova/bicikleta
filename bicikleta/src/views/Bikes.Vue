@@ -1,12 +1,22 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase/firebase";
 import BikeCard from "../components/BikeCard.vue";
 
 const bicikli = ref([]);
 const pretraga = ref("");
 const vrsta = ref("");
+
+const getCurrentUser = () => {
+  return new Promise((resolve) => {
+    const stop = onAuthStateChanged(auth, (user) => {
+      stop();
+      resolve(user);
+    });
+  });
+};
 
 const ucitaj = async () => {
   const q = query(collection(db, "bicikli"), where("aktivan", "==", true));
@@ -97,7 +107,11 @@ const filtrirani = computed(() => {
   });
 });
 
-onMounted(ucitaj);
+onMounted(async () => {
+  await getCurrentUser();
+  await ucitaj();
+});
+
 </script>
 
 <template>

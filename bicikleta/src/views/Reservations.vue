@@ -97,6 +97,8 @@ const ucitaj = async () => {
       data.status = "istekla";
     }
 
+
+
     let nazivBicikla = data.biciklId;
 
     const bikeSnap = await getDoc(doc(db, "bicikli", data.biciklId));

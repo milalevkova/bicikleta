@@ -41,13 +41,10 @@ const odjava = async () => {
 
 <template>
   <header class="nav">
-    <!-- logo -->
     <router-link to="/" class="brand">
       <span class="brand-icon">🚲</span>
       <span class="brand-text">BIČIKLETA</span>
     </router-link>
-
-    <!-- uvijek vidimo -->
 
     <nav class="nav-links">
       <router-link to="/" class="nav-item">
@@ -60,8 +57,6 @@ const odjava = async () => {
         <span>Bicikli</span>
       </router-link>
 
-      <!-- nije prijavljen -->
-
       <template v-if="!user">
         <router-link to="/prijava" class="nav-item">
           <span class="nav-icon">🔑</span>
@@ -73,8 +68,6 @@ const odjava = async () => {
           <span>Registracija</span>
         </router-link>
       </template>
-
-      <!-- obican korisnik -->
 
       <template v-else-if="uloga === 'korisnik'">
         <router-link to="/rezervacije" class="nav-item">
@@ -98,7 +91,6 @@ const odjava = async () => {
         </button>
       </template>
 
-      <!-- admin -->
 
       <template v-else-if="uloga === 'admin'">
         <router-link to="/admin" class="nav-item">

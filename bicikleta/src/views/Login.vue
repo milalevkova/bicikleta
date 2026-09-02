@@ -5,31 +5,33 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/firebase";
 import { useRouter } from "vue-router";
 
-const router = useRouter();
-
 const email = ref("");
 const lozinka = ref("");
 const greska = ref("");
+
+const router = useRouter();
 
 const prijavi = async () => {
   greska.value = "";
 
   try {
-    const result = await signInWithEmailAndPassword(
+    const rezultat = await signInWithEmailAndPassword(
       auth,
       email.value,
-      lozinka.value,
+      lozinka.value
     );
 
-    const userDoc = await getDoc(doc(db, "korisnici", result.user.uid));
+    const korisnikSnap = await getDoc(
+      doc(db, "korisnici", rezultat.user.uid)
+    );
 
-    if (!userDoc.exists()) {
+    if (!korisnikSnap.exists()) {
       await signOut(auth);
-      greska.value = "Korisnički profil ne postoji.";
+      greska.value = "Korisnički podaci nisu pronađeni.";
       return;
     }
 
-    const korisnik = userDoc.data();
+    const korisnik = korisnikSnap.data();
 
     if (korisnik.status === "blokiran") {
       await signOut(auth);
@@ -42,15 +44,15 @@ const prijavi = async () => {
     } else {
       router.push("/bicikli");
     }
-  } catch {
+  } catch (error) {
     greska.value = "Neispravan e-mail ili lozinka.";
   }
 };
 </script>
 
 <template>
-  <section class="card form" style="max-width: 500px; margin: 35px auto">
-    <h1 class="section-title">Prijava</h1>
+  <section class="card form">
+    <h1>Prijava</h1>
 
     <div class="form-row">
       <label>E-mail</label>
@@ -59,16 +61,22 @@ const prijavi = async () => {
 
     <div class="form-row">
       <label>Lozinka</label>
-      <input v-model="lozinka" type="password" @keyup.enter="prijavi" />
+      <input v-model="lozinka" type="password" />
     </div>
 
-    <button class="btn btn-primary" @click="prijavi">Prijavi se</button>
+    <button class="btn btn-primary" @click="prijavi">
+      Prijavi se
+    </button>
 
-    <p v-if="greska" class="notice error">{{ greska }}</p>
+    <p v-if="greska" class="notice error">
+      {{ greska }}
+    </p>
 
-    <p class="muted">
+    <p>
       Nemaš račun?
-      <router-link to="/registracija">Registriraj se</router-link>
+      <router-link to="/registracija">
+        Registriraj se
+      </router-link>
     </p>
   </section>
 </template>

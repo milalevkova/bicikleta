@@ -103,13 +103,17 @@ const vrijemeTolerancije = computed(() => {
 });
 
 const prekoraceno = computed(() => {
-  if (!vrijemeTolerancije.value) {
+  if (!vrijemeTolerancije.value || !najam.value) {
     return false;
   }
 
-  const sada = new Date();
+  const pocetak = najam.value.vrijemePocetka.toDate();
 
-  return sada > vrijemeTolerancije.value;
+  const trenutnoVrijeme = new Date(
+    pocetak.getTime() + sekunde.value * 1000
+  );
+
+  return trenutnoVrijeme > vrijemeTolerancije.value;
 });
 
 const zavrsi = async () => {
