@@ -61,10 +61,24 @@ Javni prototip aplikacije dostupan je na poveznici:
 
 Planirana zaduženja:
 
-- 
+- Početna stranica i dizajn sučelja
+- Registracija, prijava i validacija
+- Korisnički profil
+- Pregled i filtriranje bicikala
+- Detalji bicikla, rezervacija i dostupnost termina
+- Recenzije i ocjenjivanje
+- Završne UI dorade i kontaktni dio
+
 
 ### Mila Levkova
 
 Planirana zaduženja:
 
-- 
+- Povezivanje aplikacije s Firebaseom i Firestoreom
+- Moje rezervacije i otkazivanje
+- Pokretanje i završavanje najma
+- Praćenje trajanja i obračun cijene
+- Moji najmovi
+- Administratorski dio i upravljanje biciklima
+- Korisnici, blokiranje i administratorska statistika
+
